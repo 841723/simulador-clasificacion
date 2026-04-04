@@ -1,0 +1,416 @@
+{
+  "jornada-34": {
+    "cadiz-vs-cordoba": {
+      "id": 14083522,
+      "resultado": "1-3"
+    },
+    "albacete-balompie-vs-burgos-club-de-futbol": {
+      "id": 14083521,
+      "resultado": ""
+    },
+    "cultural-leonesa-vs-real-valladolid": {
+      "id": 14083527,
+      "resultado": ""
+    },
+    "deportivo-la-coruna-vs-malaga": {
+      "id": 14083525,
+      "resultado": ""
+    },
+    "eibar-vs-ad-ceuta": {
+      "id": 14083534,
+      "resultado": ""
+    },
+    "fc-andorra-vs-racing-de-santander": {
+      "id": 14083533,
+      "resultado": ""
+    },
+    "almeria-vs-leganes": {
+      "id": 14083529,
+      "resultado": ""
+    },
+    "las-palmas-vs-huesca": {
+      "id": 14083535,
+      "resultado": ""
+    },
+    "real-zaragoza-vs-mirandes": {
+      "id": 14083536,
+      "resultado": ""
+    },
+    "cd-castellon-vs-granada": {
+      "id": 14083523,
+      "resultado": ""
+    },
+    "sporting-gijon-vs-real-sociedad-b": {
+      "id": 14083538,
+      "resultado": ""
+    }
+  },
+  "jornada-35": {
+    "ad-ceuta-vs-real-sociedad-b": {
+      "id": 14083542,
+      "resultado": ""
+    },
+    "burgos-club-de-futbol-vs-sporting-gijon": {
+      "id": 14083540,
+      "resultado": ""
+    },
+    "leganes-vs-albacete-balompie": {
+      "id": 14083547,
+      "resultado": ""
+    },
+    "malaga-vs-las-palmas": {
+      "id": 14083556,
+      "resultado": ""
+    },
+    "cordoba-vs-real-zaragoza": {
+      "id": 14083545,
+      "resultado": ""
+    },
+    "granada-vs-cultural-leonesa": {
+      "id": 14083546,
+      "resultado": ""
+    },
+    "huesca-vs-deportivo-la-coruna": {
+      "id": 14083550,
+      "resultado": ""
+    },
+    "cadiz-vs-fc-andorra": {
+      "id": 14083558,
+      "resultado": ""
+    },
+    "mirandes-vs-cd-castellon": {
+      "id": 14083548,
+      "resultado": ""
+    },
+    "racing-de-santander-vs-almeria": {
+      "id": 14083557,
+      "resultado": ""
+    },
+    "real-valladolid-vs-eibar": {
+      "id": 14083552,
+      "resultado": ""
+    }
+  },
+  "jornada-36": {
+    "real-sociedad-b-vs-racing-de-santander": {
+      "id": 14081731,
+      "resultado": ""
+    },
+    "las-palmas-vs-leganes": {
+      "id": 14081747,
+      "resultado": ""
+    },
+    "real-zaragoza-vs-ad-ceuta": {
+      "id": 14081728,
+      "resultado": ""
+    },
+    "cd-castellon-vs-burgos-club-de-futbol": {
+      "id": 14081726,
+      "resultado": ""
+    },
+    "cultural-leonesa-vs-cordoba": {
+      "id": 14081723,
+      "resultado": ""
+    },
+    "fc-andorra-vs-real-valladolid": {
+      "id": 14081725,
+      "resultado": ""
+    },
+    "sporting-gijon-vs-cadiz": {
+      "id": 14081722,
+      "resultado": ""
+    },
+    "albacete-balompie-vs-granada": {
+      "id": 14083559,
+      "resultado": ""
+    },
+    "eibar-vs-huesca": {
+      "id": 14083563,
+      "resultado": ""
+    },
+    "almeria-vs-malaga": {
+      "id": 14081736,
+      "resultado": ""
+    },
+    "deportivo-la-coruna-vs-mirandes": {
+      "id": 14083560,
+      "resultado": ""
+    }
+  },
+  "jornada-37": {
+    "ad-ceuta-vs-racing-de-santander": {
+      "id": 14081737,
+      "resultado": ""
+    },
+    "albacete-balompie-vs-eibar": {
+      "id": 14081741,
+      "resultado": ""
+    },
+    "burgos-club-de-futbol-vs-deportivo-la-coruna": {
+      "id": 14081729,
+      "resultado": ""
+    },
+    "cadiz-vs-las-palmas": {
+      "id": 14081749,
+      "resultado": ""
+    },
+    "cordoba-vs-sporting-gijon": {
+      "id": 14081745,
+      "resultado": ""
+    },
+    "granada-vs-almeria": {
+      "id": 14081750,
+      "resultado": ""
+    },
+    "huesca-vs-real-zaragoza": {
+      "id": 14081740,
+      "resultado": ""
+    },
+    "leganes-vs-fc-andorra": {
+      "id": 14081739,
+      "resultado": ""
+    },
+    "mirandes-vs-cultural-leonesa": {
+      "id": 14081748,
+      "resultado": ""
+    },
+    "malaga-vs-cd-castellon": {
+      "id": 14081724,
+      "resultado": ""
+    },
+    "real-valladolid-vs-real-sociedad-b": {
+      "id": 14081732,
+      "resultado": ""
+    }
+  },
+  "jornada-38": {
+    "almeria-vs-mirandes": {
+      "id": 14081742,
+      "resultado": ""
+    },
+    "cd-castellon-vs-cordoba": {
+      "id": 14081746,
+      "resultado": ""
+    },
+    "cultural-leonesa-vs-cadiz": {
+      "id": 14081733,
+      "resultado": ""
+    },
+    "deportivo-la-coruna-vs-leganes": {
+      "id": 14081738,
+      "resultado": ""
+    },
+    "eibar-vs-malaga": {
+      "id": 14081735,
+      "resultado": ""
+    },
+    "fc-andorra-vs-albacete-balompie": {
+      "id": 14081744,
+      "resultado": ""
+    },
+    "las-palmas-vs-real-valladolid": {
+      "id": 14081727,
+      "resultado": ""
+    },
+    "racing-de-santander-vs-huesca": {
+      "id": 14081730,
+      "resultado": ""
+    },
+    "real-sociedad-b-vs-burgos-club-de-futbol": {
+      "id": 14081743,
+      "resultado": ""
+    },
+    "real-zaragoza-vs-granada": {
+      "id": 14081734,
+      "resultado": ""
+    },
+    "sporting-gijon-vs-ad-ceuta": {
+      "id": 14081721,
+      "resultado": ""
+    }
+  },
+  "jornada-39": {
+    "ad-ceuta-vs-cd-castellon": {
+      "id": 14081756,
+      "resultado": ""
+    },
+    "albacete-balompie-vs-cultural-leonesa": {
+      "id": 14081755,
+      "resultado": ""
+    },
+    "burgos-club-de-futbol-vs-almeria": {
+      "id": 14081760,
+      "resultado": ""
+    },
+    "cadiz-vs-deportivo-la-coruna": {
+      "id": 14081751,
+      "resultado": ""
+    },
+    "cordoba-vs-granada": {
+      "id": 14081752,
+      "resultado": ""
+    },
+    "fc-andorra-vs-las-palmas": {
+      "id": 14081758,
+      "resultado": ""
+    },
+    "huesca-vs-real-sociedad-b": {
+      "id": 14081753,
+      "resultado": ""
+    },
+    "leganes-vs-racing-de-santander": {
+      "id": 14081764,
+      "resultado": ""
+    },
+    "mirandes-vs-eibar": {
+      "id": 14081763,
+      "resultado": ""
+    },
+    "malaga-vs-sporting-gijon": {
+      "id": 14081754,
+      "resultado": ""
+    },
+    "real-valladolid-vs-real-zaragoza": {
+      "id": 14081757,
+      "resultado": ""
+    }
+  },
+  "jornada-40": {
+    "ad-ceuta-vs-malaga": {
+      "id": 14081759,
+      "resultado": ""
+    },
+    "almeria-vs-las-palmas": {
+      "id": 14081761,
+      "resultado": ""
+    },
+    "cd-castellon-vs-cadiz": {
+      "id": 14081766,
+      "resultado": ""
+    },
+    "cultural-leonesa-vs-eibar": {
+      "id": 14081776,
+      "resultado": ""
+    },
+    "cordoba-vs-albacete-balompie": {
+      "id": 14081762,
+      "resultado": ""
+    },
+    "deportivo-la-coruna-vs-fc-andorra": {
+      "id": 14081771,
+      "resultado": ""
+    },
+    "granada-vs-burgos-club-de-futbol": {
+      "id": 14081777,
+      "resultado": ""
+    },
+    "leganes-vs-huesca": {
+      "id": 14081768,
+      "resultado": ""
+    },
+    "racing-de-santander-vs-real-valladolid": {
+      "id": 14081765,
+      "resultado": ""
+    },
+    "real-sociedad-b-vs-mirandes": {
+      "id": 14081769,
+      "resultado": ""
+    },
+    "real-zaragoza-vs-sporting-gijon": {
+      "id": 14081767,
+      "resultado": ""
+    }
+  },
+  "jornada-41": {
+    "albacete-balompie-vs-real-sociedad-b": {
+      "id": 14081770,
+      "resultado": ""
+    },
+    "cultural-leonesa-vs-burgos-club-de-futbol": {
+      "id": 14081781,
+      "resultado": ""
+    },
+    "cadiz-vs-leganes": {
+      "id": 14081774,
+      "resultado": ""
+    },
+    "eibar-vs-cordoba": {
+      "id": 14081782,
+      "resultado": ""
+    },
+    "fc-andorra-vs-ad-ceuta": {
+      "id": 14081780,
+      "resultado": ""
+    },
+    "huesca-vs-cd-castellon": {
+      "id": 14081772,
+      "resultado": ""
+    },
+    "las-palmas-vs-real-zaragoza": {
+      "id": 14081773,
+      "resultado": ""
+    },
+    "mirandes-vs-granada": {
+      "id": 14081779,
+      "resultado": ""
+    },
+    "malaga-vs-racing-de-santander": {
+      "id": 14081775,
+      "resultado": ""
+    },
+    "real-valladolid-vs-deportivo-la-coruna": {
+      "id": 14081778,
+      "resultado": ""
+    },
+    "sporting-gijon-vs-almeria": {
+      "id": 14081783,
+      "resultado": ""
+    }
+  },
+  "jornada-42": {
+    "ad-ceuta-vs-albacete-balompie": {
+      "id": 14083412,
+      "resultado": ""
+    },
+    "almeria-vs-real-valladolid": {
+      "id": 14083406,
+      "resultado": ""
+    },
+    "burgos-club-de-futbol-vs-fc-andorra": {
+      "id": 14081785,
+      "resultado": ""
+    },
+    "cd-castellon-vs-eibar": {
+      "id": 14081784,
+      "resultado": ""
+    },
+    "cordoba-vs-huesca": {
+      "id": 14081787,
+      "resultado": ""
+    },
+    "deportivo-la-coruna-vs-las-palmas": {
+      "id": 14083395,
+      "resultado": ""
+    },
+    "granada-vs-sporting-gijon": {
+      "id": 14083399,
+      "resultado": ""
+    },
+    "leganes-vs-mirandes": {
+      "id": 14083403,
+      "resultado": ""
+    },
+    "racing-de-santander-vs-cadiz": {
+      "id": 14083415,
+      "resultado": ""
+    },
+    "real-sociedad-b-vs-cultural-leonesa": {
+      "id": 14081786,
+      "resultado": ""
+    },
+    "real-zaragoza-vs-malaga": {
+      "id": 14081788,
+      "resultado": ""
+    }
+  }
+}

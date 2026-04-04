@@ -10,9 +10,9 @@ function AppContent() {
 
   if (state.loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-3">⚽</div>
+          <div className="text-5xl mb-4 animate-bounce">⚽</div>
           <p className="text-gray-600 text-lg font-medium">Cargando datos...</p>
         </div>
       </div>
@@ -21,26 +21,32 @@ function AppContent() {
 
   if (state.error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center text-red-600">
-          <p className="text-lg font-semibold">Error al cargar datos</p>
-          <p className="text-sm mt-1">{state.error}</p>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center text-red-600 bg-white rounded-2xl p-8 shadow">
+          <p className="text-lg font-semibold mb-1">Error al cargar datos</p>
+          <p className="text-sm text-gray-500">{state.error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       <Header />
       <SimulationManager />
-      <main className='grid grid-cols-[1fr_300px] gap-6 p-6'>
-        <div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Main content */}
+        <main className="flex-1 overflow-y-auto p-4">
           {state.activeView === 'jornada' && <JornadaView />}
           {state.activeView === 'teams' && <TeamView />}
-        </div>
-        <StandingsTable />
-      </main>
+        </main>
+
+        {/* Sticky sidebar standings */}
+        <aside className="w-72 shrink-0 overflow-y-auto bg-white border-l border-gray-200 shadow-inner">
+          <StandingsTable />
+        </aside>
+      </div>
     </div>
   );
 }

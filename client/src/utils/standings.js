@@ -1,8 +1,25 @@
 /**
- * Determines if a match is finished (non-editable).
+ * Parse a "home-away" resultado string to a 1/X/2 result code.
+ * Returns null if the string is empty or invalid.
  */
-export function isMatchFinished(status) {
-  return status === 'Ended' || status === 'Finished' || status === 'AET' || status === 'AP';
+export function parseResultado(resultado) {
+  if (!resultado) return null;
+  const parts = resultado.split('-');
+  if (parts.length !== 2) return null;
+  const home = parseInt(parts[0], 10);
+  const away = parseInt(parts[1], 10);
+  if (isNaN(home) || isNaN(away)) return null;
+  if (home > away) return '1';
+  if (home < away) return '2';
+  return 'X';
+}
+
+/**
+ * Returns true if a match is locked (result cannot be modified).
+ * A match is locked when resultados.json has a non-empty resultado for it.
+ */
+export function isMatchLocked(matchId, lockedMatchIds) {
+  return matchId in lockedMatchIds;
 }
 
 /**
@@ -19,19 +36,15 @@ export function getDefaultResult(homeTeam, awayTeam, standings) {
 }
 
 /**
- * Build the initial results map from match data.
- * Finished matches: result from actual winnerCode.
+ * Build the initial results map.
+ * Locked matches: result derived from resultados.json resultado.
  * Pending matches: default result from standings positions.
  */
-export function buildInitialResults(allMatches, standingsRows) {
+export function buildInitialResults(allMatches, standingsRows, lockedMatchIds = {}) {
   const results = {};
   for (const match of allMatches) {
-    if (isMatchFinished(match.status)) {
-      // winnerCode: 1=home wins, 2=away wins, 3=draw
-      if (match.winnerCode === 1) results[match.id] = '1';
-      else if (match.winnerCode === 2) results[match.id] = '2';
-      else if (match.winnerCode === 3) results[match.id] = 'X';
-      else results[match.id] = 'X'; // fallback for unexpected values
+    if (lockedMatchIds[match.id] !== undefined) {
+      results[match.id] = parseResultado(lockedMatchIds[match.id]) ?? 'X';
     } else {
       results[match.id] = getDefaultResult(match.homeTeam, match.awayTeam, standingsRows);
     }
@@ -40,12 +53,12 @@ export function buildInitialResults(allMatches, standingsRows) {
 }
 
 /**
- * Calculate projected standings from base standings + pending match results.
- * Base standings already incorporate finished matches.
- * We apply only pending (non-finished) match results on top.
+ * Calculate projected standings from base standings + simulated match results.
+ * Base standings already incorporate locked/played matches.
+ * We apply only unlocked (pending) match results on top.
  */
-export function calculateProjectedStandings(baseStandingsRows, allMatches, results) {
-  // Deep clone
+export function calculateProjectedStandings(baseStandingsRows, allMatches, results, lockedMatchIds = {}) {
+  // Deep clone base standings into a mutable map
   const map = {};
   for (const row of baseStandingsRows) {
     map[row.team.name] = {
@@ -62,7 +75,9 @@ export function calculateProjectedStandings(baseStandingsRows, allMatches, resul
   }
 
   for (const match of allMatches) {
-    if (isMatchFinished(match.status)) continue;
+    // Skip locked matches – already accounted for in baseStandings
+    if (isMatchLocked(match.id, lockedMatchIds)) continue;
+
     const result = results[match.id];
     if (!result) continue;
 

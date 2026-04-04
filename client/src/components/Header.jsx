@@ -1,9 +1,8 @@
 import { useSimulation } from '../context/SimulationContext';
 
 const TABS = [
-  { id: 'jornada', label: 'Por Jornada' },
-  { id: 'teams', label: 'Por Equipo' },
-  { id: 'standings', label: 'Clasificación' },
+  { id: 'jornada', label: '📅 Por Jornada' },
+  { id: 'teams', label: '👥 Por Equipo' },
 ];
 
 export default function Header() {
@@ -11,20 +10,33 @@ export default function Header() {
 
   return (
     <header className="bg-blue-900 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">⚽</span>
-          <div>
-            <h1 className="text-lg font-bold leading-tight">Simulador de Clasificación</h1>
-            <p className="text-xs text-blue-200">LaLiga 2 · Desde jornada 34</p>
+      <div className="px-4 py-3 flex items-center justify-between gap-3">
+        {/* Brand */}
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-2xl shrink-0">⚽</span>
+          <div className="min-w-0">
+            <h1 className="text-base font-bold leading-tight">Simulador de Clasificación</h1>
+            <p className="text-xs text-blue-200">LaLiga 2 · Jornadas 34–42</p>
           </div>
         </div>
-        <nav className="flex gap-1">
+
+        {/* Active simulation name */}
+        {state.activeSimulationName && (
+          <div className="hidden sm:flex items-center gap-1 bg-blue-800 rounded-lg px-3 py-1 text-xs shrink-0">
+            <span className="text-blue-300">Simulación:</span>
+            <span className="font-semibold text-yellow-300 truncate max-w-40">
+              {state.activeSimulationName}
+            </span>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <nav className="flex gap-1 shrink-0">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => dispatch({ type: 'SET_VIEW', payload: tab.id })}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 state.activeView === tab.id
                   ? 'bg-white text-blue-900'
                   : 'text-blue-100 hover:bg-blue-800'
@@ -35,6 +47,14 @@ export default function Header() {
           ))}
         </nav>
       </div>
+
+      {/* Mobile sim name */}
+      {state.activeSimulationName && (
+        <div className="sm:hidden bg-blue-800 px-4 py-1 text-xs text-center">
+          <span className="text-blue-300">Simulación activa: </span>
+          <span className="font-semibold text-yellow-300">{state.activeSimulationName}</span>
+        </div>
+      )}
     </header>
   );
 }

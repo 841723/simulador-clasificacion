@@ -1,71 +1,82 @@
 import { useSimulation } from '../context/SimulationContext';
-import { isMatchFinished } from '../utils/standings';
+import { isMatchLocked, parseResultado } from '../utils/standings';
+import { getTeamColor } from '../utils/teamColors';
+import TeamLogo from './TeamLogo';
 
-const RESULT_LABELS = { '1': '1', X: 'X', '2': '2' };
-const RESULT_COLORS = {
-  '1': 'bg-green-100 text-green-800',
-  X: 'bg-yellow-100 text-yellow-800',
-  '2': 'bg-red-100 text-red-800',
-};
 const RESULT_OPTIONS = ['1', 'X', '2'];
+
+function isModified(matchId, state) {
+  if (!state.activeSimulationName) return false;
+  const savedResult = state.savedSimulations[state.activeSimulationName]?.results?.[matchId];
+  return savedResult !== undefined && savedResult !== state.results[matchId];
+}
 
 function MatchCell({ match, teamName }) {
   const { state, dispatch } = useSimulation();
-  const finished = isMatchFinished(match.status);
+  const locked = isMatchLocked(match.id, state.lockedMatchIds);
   const current = state.results[match.id];
   const isHome = match.homeTeam === teamName;
+  const modified = isModified(match.id, state);
 
-  // Determine win/draw/loss from team's perspective
-  let teamResult = null;
-  if (current === '1') teamResult = isHome ? 'W' : 'L';
-  else if (current === 'X') teamResult = 'D';
-  else if (current === '2') teamResult = isHome ? 'L' : 'W';
+  const getTeamResult = (r) => {
+    if (r === '1') return isHome ? 'W' : 'L';
+    if (r === 'X') return 'D';
+    return isHome ? 'L' : 'W';
+  };
+
+  const teamResult = getTeamResult(current);
 
   const resultClass =
     teamResult === 'W'
-      ? 'text-green-700'
+      ? 'text-emerald-700 font-bold'
       : teamResult === 'L'
-      ? 'text-red-700'
-      : 'text-yellow-700';
+      ? 'text-rose-700 font-bold'
+      : 'text-amber-600 font-bold';
 
   const opponent = isHome ? match.awayTeam : match.homeTeam;
   const venue = isHome ? 'L' : 'V';
+  const venueBadge = isHome
+    ? 'bg-blue-100 text-blue-700'
+    : 'bg-purple-100 text-purple-700';
 
   return (
-    <td className="border border-gray-200 p-2 min-w-[180px] align-top">
-      <div className="text-xs text-gray-500 mb-1">
-        <span className={`font-bold ${venue === 'L' ? 'text-blue-600' : 'text-purple-600'}`}>
+    <td
+      className={`border border-gray-200 p-2 min-w-[160px] align-top ${
+        modified ? 'bg-yellow-50' : ''
+      }`}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* Opponent row */}
+      <div className="flex items-center gap-1 mb-1.5">
+        <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${venueBadge}`}>
           {venue}
-        </span>{' '}
-        vs <span className="font-medium">{opponent}</span>
+        </span>
+        <TeamLogo teamName={opponent} size="xs" />
+        <span className="text-xs text-gray-600 truncate">{opponent}</span>
+        {modified && (
+          <span className="ml-auto w-3 h-3 rounded-full bg-yellow-400 shrink-0" title="Resultado modificado" />
+        )}
       </div>
-      {finished ? (
+
+      {locked ? (
         <div className="flex items-center gap-1">
-          <span className={`text-sm font-bold ${resultClass}`}>
+          <span className={`text-sm ${resultClass}`}>
             {match.homeScore} – {match.awayScore}
           </span>
-          <span
-            className={`text-xs px-1 rounded ${RESULT_COLORS[current] || ''} font-semibold`}
-          >
-            {RESULT_LABELS[current]}
-          </span>
+          <span className="text-xs text-gray-400">({current})</span>
         </div>
       ) : (
-        <div className="flex gap-1 mt-1">
+        <div className="flex gap-0.5">
           {RESULT_OPTIONS.map((opt) => {
-            let optTeamResult = null;
-            if (opt === '1') optTeamResult = isHome ? 'W' : 'L';
-            else if (opt === 'X') optTeamResult = 'D';
-            else optTeamResult = isHome ? 'L' : 'W';
-
-            const activeClass =
-              current === opt
-                ? optTeamResult === 'W'
-                  ? 'bg-green-600 text-white'
-                  : optTeamResult === 'L'
-                  ? 'bg-red-600 text-white'
-                  : 'bg-yellow-500 text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200';
+            const optTeamResult = getTeamResult(opt);
+            const isActive = current === opt;
+            const activeClass = isActive
+              ? optTeamResult === 'W'
+                ? 'bg-emerald-600 text-white'
+                : optTeamResult === 'L'
+                ? 'bg-rose-600 text-white'
+                : 'bg-amber-500 text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200';
 
             return (
               <button
@@ -111,28 +122,30 @@ export default function TeamView() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">Vista por Equipo</h2>
+    <div className="px-2 py-4">
+      <h2 className="text-lg font-bold text-gray-800 mb-3">Vista por Equipo</h2>
 
       {/* Team selector */}
-      <div className="mb-6">
-        <p className="text-sm font-medium text-gray-600 mb-2">
-          Selecciona equipos (puede ser más de uno):
+      <div className="mb-4">
+        <p className="text-xs font-medium text-gray-500 mb-2">
+          Selecciona uno o más equipos:
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {allTeams.map((name) => {
             const isSelected = selected.includes(name);
+            const color = getTeamColor(name, selected);
             const pos = projectedStandings.find((r) => r.team.name === name)?.position;
             return (
               <button
                 key={name}
                 onClick={() => toggleTeam(name)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  isSelected
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'
+                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+                  isSelected && color
+                    ? `${color.bg} text-white border-transparent`
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'
                 }`}
               >
+                <TeamLogo teamName={name} size="xs" />
                 {pos}. {name}
               </button>
             );
@@ -141,7 +154,7 @@ export default function TeamView() {
         {selected.length > 0 && (
           <button
             onClick={() => dispatch({ type: 'SET_SELECTED_TEAMS', payload: [] })}
-            className="mt-2 text-xs text-red-500 hover:text-red-700 underline"
+            className="mt-2 text-xs text-rose-500 hover:text-rose-700 underline"
           >
             Limpiar selección
           </button>
@@ -149,68 +162,81 @@ export default function TeamView() {
       </div>
 
       {selected.length === 0 ? (
-        <div className="text-center text-gray-500 py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-          <p className="text-lg">Selecciona al menos un equipo para ver sus resultados</p>
+        <div className="text-center text-gray-400 py-16 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+          <p className="text-base">Selecciona al menos un equipo</p>
         </div>
       ) : (
         <>
           {/* Reset buttons per team */}
-          <div className="flex gap-2 flex-wrap mb-4">
-            {selected.map((team) => (
-              <button
-                key={team}
-                onClick={() =>
-                  dispatch({ type: 'RESET_TEAM', payload: { teamName: team } })
-                }
-                className="px-3 py-1 text-xs rounded-lg bg-orange-100 text-orange-700 hover:bg-orange-200 border border-orange-300 font-medium"
-              >
-                ↺ Reset {team}
-              </button>
-            ))}
+          <div className="flex gap-2 flex-wrap mb-3">
+            {selected.map((team) => {
+              const color = getTeamColor(team, selected);
+              return (
+                <button
+                  key={team}
+                  onClick={() =>
+                    dispatch({ type: 'RESET_TEAM', payload: { teamName: team } })
+                  }
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-lg font-medium border transition-colors ${
+                    color
+                      ? `${color.light} ${color.text} ${color.border}`
+                      : 'bg-orange-50 text-orange-700 border-orange-300'
+                  }`}
+                >
+                  <TeamLogo teamName={team} size="xs" />
+                  ↺ Reset {team}
+                </button>
+              );
+            })}
           </div>
 
           {/* Results table */}
           <div className="overflow-x-auto rounded-xl shadow border border-gray-200">
             <table className="text-sm border-collapse min-w-full">
               <thead>
-                <tr className="bg-blue-900 text-white">
-                  <th className="border border-blue-800 px-3 py-2 text-left min-w-[80px]">
-                    Jornada
+                <tr>
+                  <th className="border border-gray-300 px-3 py-2 bg-gray-800 text-white text-left min-w-[60px]">
+                    J
                   </th>
-                  {selected.map((team) => (
-                    <th
-                      key={team}
-                      className="border border-blue-800 px-3 py-2 text-left min-w-[180px]"
-                    >
-                      {team}
-                    </th>
-                  ))}
+                  {selected.map((team) => {
+                    const color = getTeamColor(team, selected);
+                    return (
+                      <th
+                        key={team}
+                        className={`border border-gray-300 px-3 py-2 text-left min-w-[160px] ${
+                          color ? color.header : 'bg-blue-900 text-white'
+                        }`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <TeamLogo teamName={team} size="xs" />
+                          <span className="text-sm font-semibold">{team}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {JORNADAS.map((j) => (
                   <tr
                     key={j}
-                    className="hover:bg-blue-50 odd:bg-white even:bg-gray-50 cursor-pointer"
-                    onClick={() => {
-                      dispatch({ type: 'SET_JORNADA', payload: j });
-                      dispatch({ type: 'SET_VIEW', payload: 'jornada' });
-                    }}
+                    className="hover:bg-blue-50 odd:bg-white even:bg-gray-50"
                   >
-                    <td className="border border-gray-200 px-3 py-2 font-semibold text-blue-700">
-                      J{j}
+                    <td className="border border-gray-200 px-3 py-2 font-semibold text-blue-700 text-sm">
+                      {j}
                     </td>
                     {selected.map((team) => {
                       const match = jornadaMatchMap[j][team];
-                      if (!match)
+                      if (!match) {
                         return (
                           <td
                             key={team}
                             className="border border-gray-200 p-2 text-gray-400 text-xs italic"
                           >
-                            Descansa
+                            —
                           </td>
                         );
+                      }
                       return <MatchCell key={team} match={match} teamName={team} />;
                     })}
                   </tr>

@@ -8,9 +8,8 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 
-// Serve data files (jornadas + standings)
-app.use('/jornadas', express.static(join(__dirname, 'public/jornadas')));
-app.use('/standings', express.static(join(__dirname, 'public/standings')));
+// Serve all public data files (jornadas, standings, teams, resultados)
+app.use(express.static(join(__dirname, 'public')));
 
 // Serve React app
 app.use(express.static(join(__dirname, 'dist')));

@@ -13,6 +13,8 @@ export default defineConfig({
     proxy: {
       '/jornadas': 'http://localhost:3000',
       '/standings': 'http://localhost:3000',
+      '/teams.json': 'http://localhost:3000',
+      '/resultados.json': 'http://localhost:3000',
     },
   },
 })
