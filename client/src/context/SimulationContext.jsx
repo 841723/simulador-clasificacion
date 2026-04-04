@@ -5,7 +5,6 @@ import {
   defaultScoreForResult,
   calculateProjectedStandings,
   isMatchLocked,
-  parseScore,
 } from '../utils/standings';
 
 const SimulationContext = createContext(null);
@@ -87,7 +86,9 @@ function reducer(state, action) {
       };
       try {
         localStorage.setItem('savedSimulations', JSON.stringify(updated));
-      } catch (_) {}
+      } catch (e) {
+        console.error('Error saving simulation:', e);
+      }
       return { ...state, savedSimulations: updated, activeSimulationName: name };
     }
     case 'LOAD_SIMULATION': {
@@ -106,7 +107,9 @@ function reducer(state, action) {
       delete updated[name];
       try {
         localStorage.setItem('savedSimulations', JSON.stringify(updated));
-      } catch (_) {}
+      } catch (e) {
+        console.error('Error deleting simulation:', e);
+      }
       const activeSimulationName =
         state.activeSimulationName === name ? null : state.activeSimulationName;
       return { ...state, savedSimulations: updated, activeSimulationName };
@@ -174,7 +177,9 @@ export function SimulationProvider({ children }) {
       if (raw) {
         dispatch({ type: 'LOAD_SAVED_SIMS', payload: JSON.parse(raw) });
       }
-    } catch (_) {}
+    } catch (e) {      
+      console.error('Error loading saved simulations:', e);
+    }
   }, []);
 
   // Fetch all data on mount
@@ -276,6 +281,7 @@ export function SimulationProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSimulation() {
   const ctx = useContext(SimulationContext);
   if (!ctx) throw new Error('useSimulation must be used inside SimulationProvider');

@@ -4,6 +4,7 @@ import SimulationManager from "./components/SimulationManager";
 import JornadaView from "./components/JornadaView";
 import TeamView from "./components/TeamView";
 import StandingsTable from "./components/StandingsTable";
+import { Logo } from "./components/Logo";
 
 function AppContent() {
     const { state } = useSimulation();
@@ -11,8 +12,8 @@ function AppContent() {
     if (state.loading) {
         return (
             <div className='min-h-screen bg-gray-100 flex items-center justify-center'>
-                <div className='text-center'>
-                    <div className='text-5xl mb-4 animate-bounce'>⚽</div>
+                <div className='text-center flex flex-col items-center gap-4'>
+                    <Logo className="w-14 h-1w-14 text-black animate-bounce" />
                     <p className='text-gray-600 text-lg font-medium'>
                         Cargando datos...
                     </p>
@@ -39,7 +40,7 @@ function AppContent() {
             <Header />
             <SimulationManager />
 
-            <main className='grid grid-cols-[3fr_1fr] p-4'>
+            <main className='grid grid-cols-[3fr_1fr] p-4 relative'>
                 {/* Main content */}
                 {state.activeView === "jornada" && <JornadaView />}
                 {state.activeView === "teams" && <TeamView />}

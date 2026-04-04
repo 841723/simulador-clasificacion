@@ -1,8 +1,9 @@
 import { useSimulation } from '../context/SimulationContext';
+import { Logo } from "./Logo.jsx";
 
 const TABS = [
-  { id: 'jornada', label: '📅 Por Jornada' },
-  { id: 'teams', label: '👥 Por Equipo' },
+  { id: 'jornada', label: 'Jornadas' },
+  { id: 'teams', label: 'Equipos' },
 ];
 
 export default function Header() {
@@ -13,10 +14,12 @@ export default function Header() {
       <div className="px-4 py-3 flex items-center justify-between gap-3">
         {/* Brand */}
         <div className="flex items-center gap-3 min-w-0">
-          <span className="text-2xl shrink-0">⚽</span>
+          <picture>
+            <Logo className="w-10 h-10" />
+          </picture>
           <div className="min-w-0">
             <h1 className="text-base font-bold leading-tight">Simulador de Clasificación</h1>
-            <p className="text-xs text-blue-200">LaLiga 2 · Jornadas 34–42</p>
+            <p className="text-xs text-blue-200">LaLiga 2</p>
           </div>
         </div>
 

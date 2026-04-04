@@ -3,22 +3,22 @@ import { isMatchLocked, isModified } from '../utils/standings';
 import TeamLogo from './TeamLogo';
 
 const RESULT_OPTIONS = [
-  { value: '1', label: '1', title: 'Local gana' },
-  { value: 'X', label: 'X', title: 'Empate' },
-  { value: '2', label: '2', title: 'Visitante gana' },
+    { value: "1", label: "1", title: "Local gana" },
+    { value: "X", label: "×", title: "Empate" },
+    { value: "2", label: "2", title: "Visitante gana" },
 ];
 
 function PronosticoDisplay({ pronostico }) {
   return (
       <div className='flex gap-1 mt-1 justify-center flex-wrap'>
           <span className='border border-gray-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
-              Local {(pronostico.local * 100).toFixed(0)}%
+              {(pronostico.local * 100).toFixed(0)}%
           </span>
           <span className='border border-gray-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
-              Empate {(pronostico.empate * 100).toFixed(0)}%
+              {(pronostico.empate * 100).toFixed(0)}%
           </span>
           <span className='border border-gray-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
-              Visit. {(pronostico.visitante * 100).toFixed(0)}%
+              {(pronostico.visitante * 100).toFixed(0)}%
           </span>
       </div>
   );
@@ -43,7 +43,6 @@ export function ResultSelector({ match }) {
   const current = state.results[match.id];
   const score = state.scores[match.id] || { home: 0, away: 0 };
   const pronostico = state.pronosticos[match.id];
-  const modified = isModified(match.id, state);
 
   const handleGoalChange = (side, val) => {
     const newHome = side === 'home' ? val : score.home;
@@ -74,8 +73,7 @@ export function ResultSelector({ match }) {
 
       {/* 1/X/2 selector */}
       <div
-        className={`inline-flex rounded-lg overflow-hidden border-2 transition-shadow ${
-          modified ? 'border-yellow-400' : 'border-gray-200'
+        className={`inline-flex rounded-lg overflow-hidden border-2 border-gray-200
         }`}
       >
         {RESULT_OPTIONS.map((opt) => (
@@ -87,7 +85,7 @@ export function ResultSelector({ match }) {
             }
             className={`px-4 py-1.5 text-sm font-bold transition-colors ${
               current === opt.value
-                ? 'bg-blue-600 text-white'
+                ? 'bg-blue-400 text-white'
                 : 'bg-white text-gray-500 hover:bg-gray-100'
             }`}
           >
@@ -163,8 +161,8 @@ export default function JornadaView() {
                   locked
                     ? 'bg-gray-50 border-gray-200 opacity-80'
                     : modified
-                    ? 'bg-white border-yellow-400 shadow-sm border-l-4'
-                    : 'bg-white border-gray-200 shadow-sm hover:shadow'
+                    ? 'bg-white border-yellow-400 border-t-4'
+                    : 'bg-white border-gray-200'
                 }`}
               >
                 {/* Home team */}
@@ -178,7 +176,7 @@ export default function JornadaView() {
                 </div>
 
                 {/* Center: inputs / score */}
-                <div className="flex flex-col items-center gap-1 shrink-0 min-w-[150px]">
+                <div className="flex flex-col items-center gap-1 shrink-0 min-w-37.5">
                   <ResultSelector match={match} />
                 </div>
 
