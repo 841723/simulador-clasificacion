@@ -27,10 +27,11 @@ export function buildInitialResults(allMatches, standingsRows) {
   const results = {};
   for (const match of allMatches) {
     if (isMatchFinished(match.status)) {
-      // winnerCode: 1=home, 2=away, 3=draw
+      // winnerCode: 1=home wins, 2=away wins, 3=draw
       if (match.winnerCode === 1) results[match.id] = '1';
       else if (match.winnerCode === 2) results[match.id] = '2';
-      else results[match.id] = 'X';
+      else if (match.winnerCode === 3) results[match.id] = 'X';
+      else results[match.id] = 'X'; // fallback for unexpected values
     } else {
       results[match.id] = getDefaultResult(match.homeTeam, match.awayTeam, standingsRows);
     }
