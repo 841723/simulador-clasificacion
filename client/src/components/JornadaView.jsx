@@ -16,17 +16,17 @@ function isModified(matchId, state) {
 
 function PronosticoDisplay({ pronostico }) {
   return (
-    <div className="flex gap-1 mt-1 justify-center flex-wrap">
-      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        Local {(pronostico.local * 100).toFixed(2)}%
-      </span>
-      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        Empate {(pronostico.empate * 100).toFixed(2)}%
-      </span>
-      <span className="bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        Visit. {(pronostico.visitante * 100).toFixed(2)}%
-      </span>
-    </div>
+      <div className='flex gap-1 mt-1 justify-center flex-wrap'>
+          <span className='border border-emerald-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
+              Local {(pronostico.local * 100).toFixed(0)}%
+          </span>
+          <span className='border border-amber-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
+              Empate {(pronostico.empate * 100).toFixed(0)}%
+          </span>
+          <span className='border border-rose-200 px-1.5 py-0.5 rounded text-xs font-medium text-gray-500'>
+              Visit. {(pronostico.visitante * 100).toFixed(0)}%
+          </span>
+      </div>
   );
 }
 
@@ -43,7 +43,7 @@ function GoalInput({ value, onChange, disabled }) {
   );
 }
 
-function ResultSelector({ match }) {
+export function ResultSelector({ match }) {
   const { state, dispatch } = useSimulation();
   const locked = isMatchLocked(match.id, state.lockedMatchIds);
   const current = state.results[match.id];

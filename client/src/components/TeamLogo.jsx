@@ -34,7 +34,7 @@ export default function TeamLogo({ teamName, size = 'sm', className = '' }) {
     <img
       src={imageUrl}
       alt={teamName}
-      className={`${sizeClass} ${className} object-contain rounded-full shrink-0`}
+      className={`${sizeClass} ${className} object-contain shrink-0`}
       onError={(e) => {
         e.target.style.display = 'none';
       }}
