@@ -31,7 +31,7 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col">
+    <div className="h-screen bg-gray-100 flex flex-col overflow-hidden">
       <Header />
       <SimulationManager />
 

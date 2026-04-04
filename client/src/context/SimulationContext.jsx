@@ -1,8 +1,11 @@
 import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import {
   buildInitialResults,
+  buildInitialScores,
+  defaultScoreForResult,
   calculateProjectedStandings,
   isMatchLocked,
+  parseScore,
 } from '../utils/standings';
 
 const SimulationContext = createContext(null);
@@ -21,8 +24,11 @@ const initialState = {
   allMatches: [],             // flat list of all matches across jornadas
   results: {},                // matchId → "1" | "X" | "2"
   originalResults: {},        // initial computed results (for reset)
+  scores: {},                 // matchId → { home: number, away: number }
+  originalScores: {},         // initial computed scores (for reset)
   lockedMatchIds: {},         // matchId → resultado string (e.g. "1-3")
-  savedSimulations: {},       // name → { results }
+  pronosticos: {},            // matchId → { local, empate, visitante }
+  savedSimulations: {},       // name → { results, scores }
   activeSimulationName: null, // name of currently loaded/saved simulation
   selectedTeams: [],
   currentJornada: 34,
@@ -32,17 +38,20 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'LOAD_DATA': {
-      const { baseStandings, allMatches, lockedMatchIds } = action.payload;
+      const { baseStandings, allMatches, lockedMatchIds, pronosticos } = action.payload;
       const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
-      const originalResults = { ...results };
+      const scores = buildInitialScores(allMatches, results, lockedMatchIds);
       return {
         ...state,
         loading: false,
         baseStandings,
         allMatches,
         results,
-        originalResults,
+        originalResults: { ...results },
+        scores,
+        originalScores: { ...scores },
         lockedMatchIds,
+        pronosticos,
       };
     }
     case 'LOAD_ERROR':
@@ -50,15 +59,31 @@ function reducer(state, action) {
 
     case 'SET_RESULT': {
       const { matchId, result } = action.payload;
-      // Prevent modifying locked matches
       if (isMatchLocked(matchId, state.lockedMatchIds)) return state;
-      return { ...state, results: { ...state.results, [matchId]: result } };
+      const score = defaultScoreForResult(result);
+      return {
+        ...state,
+        results: { ...state.results, [matchId]: result },
+        scores: { ...state.scores, [matchId]: score },
+      };
     }
+
+    case 'SET_SCORE': {
+      const { matchId, home, away } = action.payload;
+      if (isMatchLocked(matchId, state.lockedMatchIds)) return state;
+      const result = home > away ? '1' : home < away ? '2' : 'X';
+      return {
+        ...state,
+        scores: { ...state.scores, [matchId]: { home, away } },
+        results: { ...state.results, [matchId]: result },
+      };
+    }
+
     case 'SAVE_SIMULATION': {
       const { name } = action.payload;
       const updated = {
         ...state.savedSimulations,
-        [name]: { results: { ...state.results } },
+        [name]: { results: { ...state.results }, scores: { ...state.scores } },
       };
       try {
         localStorage.setItem('savedSimulations', JSON.stringify(updated));
@@ -69,7 +94,11 @@ function reducer(state, action) {
       const { name } = action.payload;
       const sim = state.savedSimulations[name];
       if (!sim) return state;
-      return { ...state, results: { ...sim.results }, activeSimulationName: name };
+      const results = { ...sim.results };
+      const scores = sim.scores
+        ? { ...sim.scores }
+        : buildInitialScores(state.allMatches, results, state.lockedMatchIds);
+      return { ...state, results, scores, activeSimulationName: name };
     }
     case 'DELETE_SIMULATION': {
       const { name } = action.payload;
@@ -86,6 +115,7 @@ function reducer(state, action) {
       return {
         ...state,
         results: { ...state.originalResults },
+        scores: { ...state.originalScores },
         activeSimulationName: null,
       };
 
@@ -95,12 +125,14 @@ function reducer(state, action) {
         (m) => m.homeTeam === teamName || m.awayTeam === teamName
       );
       const resetResults = { ...state.results };
+      const resetScores = { ...state.scores };
       for (const m of teamMatches) {
         if (!isMatchLocked(m.id, state.lockedMatchIds)) {
           resetResults[m.id] = state.originalResults[m.id];
+          resetScores[m.id] = state.originalScores[m.id];
         }
       }
-      return { ...state, results: resetResults };
+      return { ...state, results: resetResults, scores: resetScores };
     }
 
     case 'TOGGLE_TEAM': {
@@ -162,12 +194,16 @@ export function SimulationProvider({ children }) {
         const resultadosData = await resultadosRes.json();
         const teamsData = await teamsRes.json();
 
-        // Build lockedMatchIds: matchId → resultado string (only non-empty)
+        // Build lockedMatchIds and pronosticos
         const lockedMatchIds = {};
+        const pronosticos = {};
         for (const jornada of Object.values(resultadosData)) {
           for (const match of Object.values(jornada)) {
             if (match.resultado !== '') {
               lockedMatchIds[match.id] = match.resultado;
+            }
+            if (match.pronostico) {
+              pronosticos[match.id] = match.pronostico;
             }
           }
         }
@@ -204,7 +240,10 @@ export function SimulationProvider({ children }) {
         );
 
         setTeamSlugMap(slugMap);
-        dispatch({ type: 'LOAD_DATA', payload: { baseStandings, allMatches, lockedMatchIds } });
+        dispatch({
+          type: 'LOAD_DATA',
+          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos },
+        });
       } catch (err) {
         dispatch({ type: 'LOAD_ERROR', payload: err.message });
       }

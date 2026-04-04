@@ -14,23 +14,59 @@ function isModified(matchId, state) {
   return savedResult !== undefined && savedResult !== state.results[matchId];
 }
 
+function PronosticoDisplay({ pronostico }) {
+  return (
+    <div className="flex gap-1 mt-1 justify-center flex-wrap">
+      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-xs font-medium">
+        L {(pronostico.local * 100).toFixed(2)}%
+      </span>
+      <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded text-xs font-medium">
+        E {(pronostico.empate * 100).toFixed(2)}%
+      </span>
+      <span className="bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded text-xs font-medium">
+        V {(pronostico.visitante * 100).toFixed(2)}%
+      </span>
+    </div>
+  );
+}
+
+function GoalInput({ value, onChange, disabled }) {
+  return (
+    <input
+      type="number"
+      min="0"
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+      className="w-12 text-center text-xl font-black border-2 border-gray-200 rounded-lg py-1 focus:outline-none focus:border-blue-400 disabled:bg-transparent disabled:border-transparent disabled:text-gray-400 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    />
+  );
+}
+
 function ResultSelector({ match }) {
   const { state, dispatch } = useSimulation();
   const locked = isMatchLocked(match.id, state.lockedMatchIds);
   const current = state.results[match.id];
+  const score = state.scores[match.id] || { home: 0, away: 0 };
+  const pronostico = state.pronosticos[match.id];
+
+  const handleGoalChange = (side, val) => {
+    const newHome = side === 'home' ? val : score.home;
+    const newAway = side === 'away' ? val : score.away;
+    dispatch({ type: 'SET_SCORE', payload: { matchId: match.id, home: newHome, away: newAway } });
+  };
 
   if (locked) {
-    const score = state.lockedMatchIds[match.id]; // e.g. "1-3"
-    const result = parseResultado(score);
-    const resultLabel = result === '1' ? 'L' : result === '2' ? 'V' : 'E';
+    const scoreStr = state.lockedMatchIds[match.id];
+    const result = parseResultado(scoreStr);
     const resultColor =
       result === '1' ? 'text-emerald-600' : result === '2' ? 'text-rose-600' : 'text-amber-600';
     return (
       <div className="flex flex-col items-center gap-0.5">
         <span className={`text-2xl font-black font-mono tracking-widest ${resultColor}`}>
-          {score}
+          {scoreStr}
         </span>
-        <span className="text-xs text-gray-400 font-medium">{resultLabel}</span>
+        {pronostico && <PronosticoDisplay pronostico={pronostico} />}
       </div>
     );
   }
@@ -38,12 +74,21 @@ function ResultSelector({ match }) {
   const modified = isModified(match.id, state);
 
   return (
-    <div className={`flex flex-col items-center gap-1 ${modified ? 'relative' : ''}`}>
+    <div className={`flex flex-col items-center gap-1.5 ${modified ? 'relative' : ''}`}>
       {modified && (
         <span className="absolute -top-2 -right-2 w-4 h-4 rounded-full bg-yellow-400 text-yellow-900 text-xs font-bold flex items-center justify-center z-10">
           !
         </span>
       )}
+
+      {/* Goal inputs */}
+      <div className="flex items-center gap-2">
+        <GoalInput value={score.home} onChange={(v) => handleGoalChange('home', v)} />
+        <span className="text-gray-300 font-bold text-lg">—</span>
+        <GoalInput value={score.away} onChange={(v) => handleGoalChange('away', v)} />
+      </div>
+
+      {/* 1/X/2 selector */}
       <div
         className={`inline-flex rounded-lg overflow-hidden border-2 transition-shadow ${
           modified ? 'border-yellow-400 shadow-yellow-200 shadow-md' : 'border-gray-200'
@@ -56,7 +101,7 @@ function ResultSelector({ match }) {
             onClick={() =>
               dispatch({ type: 'SET_RESULT', payload: { matchId: match.id, result: opt.value } })
             }
-            className={`px-4 py-2 text-sm font-bold transition-colors ${
+            className={`px-4 py-1.5 text-sm font-bold transition-colors ${
               current === opt.value
                 ? opt.activeClass
                 : 'bg-white text-gray-500 hover:bg-gray-100'
@@ -66,6 +111,9 @@ function ResultSelector({ match }) {
           </button>
         ))}
       </div>
+
+      {/* Pronostico */}
+      {pronostico && <PronosticoDisplay pronostico={pronostico} />}
     </div>
   );
 }
@@ -120,7 +168,7 @@ export default function JornadaView() {
       {matches.length === 0 ? (
         <p className="text-center text-gray-500">Cargando partidos...</p>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {matches.map((match) => {
             const locked = isMatchLocked(match.id, state.lockedMatchIds);
             return (
@@ -142,8 +190,8 @@ export default function JornadaView() {
                   </div>
                 </div>
 
-                {/* Center: score / selector */}
-                <div className="flex flex-col items-center gap-1 shrink-0 min-w-[120px]">
+                {/* Center: inputs / score */}
+                <div className="flex flex-col items-center gap-1 shrink-0 min-w-[150px]">
                   <ResultSelector match={match} />
                 </div>
 

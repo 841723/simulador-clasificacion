@@ -1,4 +1,42 @@
 /**
+ * Parse a "home-away" score string to { home, away } numbers.
+ */
+export function parseScore(resultado) {
+  if (!resultado) return { home: 0, away: 0 };
+  const parts = resultado.split('-');
+  if (parts.length !== 2) return { home: 0, away: 0 };
+  return {
+    home: parseInt(parts[0], 10) || 0,
+    away: parseInt(parts[1], 10) || 0,
+  };
+}
+
+/**
+ * Returns the default score { home, away } for a given 1/X/2 result.
+ * '1' → 1-0, 'X' → 0-0, '2' → 0-1
+ */
+export function defaultScoreForResult(result) {
+  if (result === '1') return { home: 1, away: 0 };
+  if (result === '2') return { home: 0, away: 1 };
+  return { home: 0, away: 0 };
+}
+
+/**
+ * Builds the initial scores map from locked and unlocked matches.
+ */
+export function buildInitialScores(allMatches, results, lockedMatchIds) {
+  const scores = {};
+  for (const match of allMatches) {
+    if (lockedMatchIds[match.id] !== undefined) {
+      scores[match.id] = parseScore(lockedMatchIds[match.id]);
+    } else {
+      scores[match.id] = defaultScoreForResult(results[match.id]);
+    }
+  }
+  return scores;
+}
+
+/**
  * Parse a "home-away" resultado string to a 1/X/2 result code.
  * Returns null if the string is empty or invalid.
  */

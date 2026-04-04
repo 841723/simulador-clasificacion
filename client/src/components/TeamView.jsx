@@ -1,9 +1,7 @@
 import { useSimulation } from '../context/SimulationContext';
-import { isMatchLocked, parseResultado } from '../utils/standings';
+import { isMatchLocked } from '../utils/standings';
 import { getTeamColor } from '../utils/teamColors';
 import TeamLogo from './TeamLogo';
-
-const RESULT_OPTIONS = ['1', 'X', '2'];
 
 function isModified(matchId, state) {
   if (!state.activeSimulationName) return false;
@@ -11,88 +9,105 @@ function isModified(matchId, state) {
   return savedResult !== undefined && savedResult !== state.results[matchId];
 }
 
+function GoalInput({ value, onChange }) {
+  return (
+    <input
+      type="number"
+      min="0"
+      value={value}
+      onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+      className="w-10 text-center text-sm font-bold border border-gray-200 rounded py-0.5 focus:outline-none focus:border-blue-400 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+    />
+  );
+}
+
 function MatchCell({ match, teamName }) {
   const { state, dispatch } = useSimulation();
   const locked = isMatchLocked(match.id, state.lockedMatchIds);
   const current = state.results[match.id];
-  const isHome = match.homeTeam === teamName;
+  const score = state.scores[match.id] || { home: 0, away: 0 };
   const modified = isModified(match.id, state);
 
-  const getTeamResult = (r) => {
-    if (r === '1') return isHome ? 'W' : 'L';
-    if (r === 'X') return 'D';
-    return isHome ? 'L' : 'W';
+  const isHome = match.homeTeam === teamName;
+  const opponent = isHome ? match.awayTeam : match.homeTeam;
+
+  // Goals from selected team's perspective
+  const goalsFor = isHome ? score.home : score.away;
+  const goalsAgainst = isHome ? score.away : score.home;
+
+  // Result from selected team's perspective
+  const teamWins = (isHome && current === '1') || (!isHome && current === '2');
+  const teamDraws = current === 'X';
+  const teamLoses = (isHome && current === '2') || (!isHome && current === '1');
+
+  const resultLabel = teamWins ? 'Victoria' : teamDraws ? 'Empate' : 'Derrota';
+  const resultClass = teamWins
+    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+    : teamDraws
+    ? 'text-amber-700 bg-amber-50 border-amber-200'
+    : 'text-rose-700 bg-rose-50 border-rose-200';
+
+  const handleGoalChange = (side, val) => {
+    // side: 'for' or 'against'
+    let newHome, newAway;
+    if (isHome) {
+      newHome = side === 'for' ? val : score.home;
+      newAway = side === 'against' ? val : score.away;
+    } else {
+      newHome = side === 'against' ? val : score.home;
+      newAway = side === 'for' ? val : score.away;
+    }
+    dispatch({ type: 'SET_SCORE', payload: { matchId: match.id, home: newHome, away: newAway } });
   };
 
-  const teamResult = getTeamResult(current);
-
-  const resultClass =
-    teamResult === 'W'
-      ? 'text-emerald-700 font-bold'
-      : teamResult === 'L'
-      ? 'text-rose-700 font-bold'
-      : 'text-amber-600 font-bold';
-
-  const opponent = isHome ? match.awayTeam : match.homeTeam;
-  const venue = isHome ? 'L' : 'V';
-  const venueBadge = isHome
-    ? 'bg-blue-100 text-blue-700'
-    : 'bg-purple-100 text-purple-700';
+  const venueBg = isHome ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700';
+  const venueLabel = isHome ? 'Local' : 'Visitante';
 
   return (
     <td
-      className={`border border-gray-200 p-2 min-w-[160px] align-top ${
+      className={`border border-gray-200 p-2 align-top min-w-[170px] ${
         modified ? 'bg-yellow-50' : ''
       }`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* Opponent row */}
       <div className="flex items-center gap-1 mb-1.5">
-        <span className={`text-xs px-1.5 py-0.5 rounded font-semibold ${venueBadge}`}>
-          {venue}
-        </span>
         <TeamLogo teamName={opponent} size="xs" />
-        <span className="text-xs text-gray-600 truncate">{opponent}</span>
+        <span className="text-xs text-gray-700 font-medium truncate flex-1">{opponent}</span>
         {modified && (
-          <span className="ml-auto w-3 h-3 rounded-full bg-yellow-400 shrink-0" title="Resultado modificado" />
+          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shrink-0" title="Resultado modificado" />
         )}
       </div>
 
+      {/* Venue badge */}
+      <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${venueBg}`}>
+        {venueLabel}
+      </span>
+
       {locked ? (
-        <div className="flex items-center gap-1">
-          <span className={`text-sm ${resultClass}`}>
-            {match.homeScore} – {match.awayScore}
+        /* Locked: show actual score */
+        <div className="mt-1.5 flex items-center gap-1.5">
+          <span className="text-sm font-black font-mono">
+            {goalsFor} — {goalsAgainst}
           </span>
-          <span className="text-xs text-gray-400">({current})</span>
+          <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold ${resultClass}`}>
+            {resultLabel}
+          </span>
         </div>
       ) : (
-        <div className="flex gap-0.5">
-          {RESULT_OPTIONS.map((opt) => {
-            const optTeamResult = getTeamResult(opt);
-            const isActive = current === opt;
-            const activeClass = isActive
-              ? optTeamResult === 'W'
-                ? 'bg-emerald-600 text-white'
-                : optTeamResult === 'L'
-                ? 'bg-rose-600 text-white'
-                : 'bg-amber-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200';
-
-            return (
-              <button
-                key={opt}
-                onClick={() =>
-                  dispatch({
-                    type: 'SET_RESULT',
-                    payload: { matchId: match.id, result: opt },
-                  })
-                }
-                className={`px-2 py-0.5 text-xs font-bold rounded transition-colors ${activeClass}`}
-              >
-                {opt}
-              </button>
-            );
-          })}
+        /* Editable: goal inputs + result */
+        <div className="mt-1.5 flex flex-col gap-1">
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-400 w-14 shrink-0">A favor</span>
+            <GoalInput value={goalsFor} onChange={(v) => handleGoalChange('for', v)} />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-gray-400 w-14 shrink-0">En contra</span>
+            <GoalInput value={goalsAgainst} onChange={(v) => handleGoalChange('against', v)} />
+          </div>
+          <span className={`text-xs px-1.5 py-0.5 rounded border font-semibold inline-block self-start mt-0.5 ${resultClass}`}>
+            {resultLabel}
+          </span>
         </div>
       )}
     </td>
@@ -195,7 +210,7 @@ export default function TeamView() {
             <table className="text-sm border-collapse min-w-full">
               <thead>
                 <tr>
-                  <th className="border border-gray-300 px-3 py-2 bg-gray-800 text-white text-left min-w-[60px]">
+                  <th className="border border-gray-300 px-3 py-2 bg-gray-800 text-white text-left min-w-[50px] text-xs">
                     J
                   </th>
                   {selected.map((team) => {
@@ -203,13 +218,13 @@ export default function TeamView() {
                     return (
                       <th
                         key={team}
-                        className={`border border-gray-300 px-3 py-2 text-left min-w-[160px] ${
+                        className={`border border-gray-300 px-3 py-2 text-left min-w-[170px] ${
                           color ? color.header : 'bg-blue-900 text-white'
                         }`}
                       >
                         <div className="flex items-center gap-1.5">
                           <TeamLogo teamName={team} size="xs" />
-                          <span className="text-sm font-semibold">{team}</span>
+                          <span className="text-xs font-semibold">{team}</span>
                         </div>
                       </th>
                     );
@@ -218,10 +233,7 @@ export default function TeamView() {
               </thead>
               <tbody>
                 {JORNADAS.map((j) => (
-                  <tr
-                    key={j}
-                    className="hover:bg-blue-50 odd:bg-white even:bg-gray-50"
-                  >
+                  <tr key={j} className="odd:bg-white even:bg-gray-50/50">
                     <td className="border border-gray-200 px-3 py-2 font-semibold text-blue-700 text-sm">
                       {j}
                     </td>
@@ -231,7 +243,7 @@ export default function TeamView() {
                         return (
                           <td
                             key={team}
-                            className="border border-gray-200 p-2 text-gray-400 text-xs italic"
+                            className="border border-gray-200 p-2 text-gray-400 text-xs italic text-center"
                           >
                             —
                           </td>
