@@ -34,10 +34,12 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <SimulationManager />
-      <main>
-        {state.activeView === 'jornada' && <JornadaView />}
-        {state.activeView === 'teams' && <TeamView />}
-        {state.activeView === 'standings' && <StandingsTable />}
+      <main className='grid grid-cols-[1fr_300px] gap-6 p-6'>
+        <div>
+          {state.activeView === 'jornada' && <JornadaView />}
+          {state.activeView === 'teams' && <TeamView />}
+        </div>
+        <StandingsTable />
       </main>
     </div>
   );
