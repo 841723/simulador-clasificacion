@@ -18,13 +18,13 @@ function PronosticoDisplay({ pronostico }) {
   return (
     <div className="flex gap-1 mt-1 justify-center flex-wrap">
       <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        L {(pronostico.local * 100).toFixed(2)}%
+        Local {(pronostico.local * 100).toFixed(2)}%
       </span>
       <span className="bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        E {(pronostico.empate * 100).toFixed(2)}%
+        Empate {(pronostico.empate * 100).toFixed(2)}%
       </span>
       <span className="bg-rose-50 text-rose-700 border border-rose-200 px-1.5 py-0.5 rounded text-xs font-medium">
-        V {(pronostico.visitante * 100).toFixed(2)}%
+        Visit. {(pronostico.visitante * 100).toFixed(2)}%
       </span>
     </div>
   );
