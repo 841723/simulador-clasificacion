@@ -1,0 +1,90 @@
+{
+    "cadiz": {
+        "id": 4488,
+        "imagen": "https://img.sofascore.com/api/v1/team/4488/image"
+    },
+    "cordoba": {
+        "id": 2850,
+        "imagen": "https://img.sofascore.com/api/v1/team/2850/image"
+    },
+    "albacete-balompie": {
+        "id": 2848,
+        "imagen": "https://img.sofascore.com/api/v1/team/2848/image"
+    },
+    "burgos-club-de-futbol": {
+        "id": 2854,
+        "imagen": "https://img.sofascore.com/api/v1/team/2854/image"
+    },
+    "cultural-leonesa": {
+        "id": 2868,
+        "imagen": "https://img.sofascore.com/api/v1/team/2868/image"
+    },
+    "real-valladolid": {
+        "id": 2831,
+        "imagen": "https://img.sofascore.com/api/v1/team/2831/image"
+    },
+    "deportivo-la-coruna": {
+        "id": 2832,
+        "imagen": "https://img.sofascore.com/api/v1/team/2832/image"
+    },
+    "malaga": {
+        "id": 2830,
+        "imagen": "https://img.sofascore.com/api/v1/team/2830/image"
+    },
+    "eibar": {
+        "id": 2839,
+        "imagen": "https://img.sofascore.com/api/v1/team/2839/image"
+    },
+    "ad-ceuta": {
+        "id": 2869,
+        "imagen": "https://img.sofascore.com/api/v1/team/2869/image"
+    },
+    "fc-andorra": {
+        "id": 324871,
+        "imagen": "https://img.sofascore.com/api/v1/team/324871/image"
+    },
+    "racing-de-santander": {
+        "id": 2835,
+        "imagen": "https://img.sofascore.com/api/v1/team/2835/image"
+    },
+    "almeria": {
+        "id": 2858,
+        "imagen": "https://img.sofascore.com/api/v1/team/2858/image"
+    },
+    "leganes": {
+        "id": 2845,
+        "imagen": "https://img.sofascore.com/api/v1/team/2845/image"
+    },
+    "las-palmas": {
+        "id": 6577,
+        "imagen": "https://img.sofascore.com/api/v1/team/6577/image"
+    },
+    "huesca": {
+        "id": 24265,
+        "imagen": "https://img.sofascore.com/api/v1/team/24265/image"
+    },
+    "real-zaragoza": {
+        "id": 2815,
+        "imagen": "https://img.sofascore.com/api/v1/team/2815/image"
+    },
+    "mirandes": {
+        "id": 35092,
+        "imagen": "https://img.sofascore.com/api/v1/team/35092/image"
+    },
+    "cd-castellon": {
+        "id": 5067,
+        "imagen": "https://img.sofascore.com/api/v1/team/5067/image"
+    },
+    "granada": {
+        "id": 33779,
+        "imagen": "https://img.sofascore.com/api/v1/team/33779/image"
+    },
+    "sporting-gijon": {
+        "id": 2852,
+        "imagen": "https://img.sofascore.com/api/v1/team/2852/image"
+    },
+    "real-sociedad-b": {
+        "id": 24360,
+        "imagen": "https://img.sofascore.com/api/v1/team/24360/image"
+    }
+}

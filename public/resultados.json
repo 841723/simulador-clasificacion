@@ -1,0 +1,911 @@
+{
+  "jornada-34": {
+    "cadiz-vs-cordoba": {
+      "id": 14083522,
+      "resultado": "1-3",
+      "pronostico": {
+        "local": 0.4526,
+        "empate": 0.2233,
+        "visitante": 0.3241
+      }
+    },
+    "albacete-balompie-vs-burgos-club-de-futbol": {
+      "id": 14083521,
+      "resultado": "2-3",
+      "pronostico": {
+        "local": 0.3543,
+        "empate": 0.249,
+        "visitante": 0.3967
+      }
+    },
+    "cultural-leonesa-vs-real-valladolid": {
+      "id": 14083527,
+      "resultado": "1-0",
+      "pronostico": {
+        "local": 0.4788,
+        "empate": 0.308,
+        "visitante": 0.2132
+      }
+    },
+    "deportivo-la-coruna-vs-malaga": {
+      "id": 14083525,
+      "resultado": "1-0",
+      "pronostico": {
+        "local": 0.5209,
+        "empate": 0.2313,
+        "visitante": 0.2478
+      }
+    },
+    "eibar-vs-ad-ceuta": {
+      "id": 14083534,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3939,
+        "empate": 0.2239,
+        "visitante": 0.3822
+      }
+    },
+    "fc-andorra-vs-racing-de-santander": {
+      "id": 14083533,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.339,
+        "empate": 0.2857,
+        "visitante": 0.3753
+      }
+    },
+    "almeria-vs-leganes": {
+      "id": 14083529,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2872,
+        "empate": 0.2458,
+        "visitante": 0.467
+      }
+    },
+    "las-palmas-vs-huesca": {
+      "id": 14083535,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4555,
+        "empate": 0.2908,
+        "visitante": 0.2537
+      }
+    },
+    "real-zaragoza-vs-mirandes": {
+      "id": 14083536,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3395,
+        "empate": 0.2966,
+        "visitante": 0.3639
+      }
+    },
+    "cd-castellon-vs-granada": {
+      "id": 14083523,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4985,
+        "empate": 0.2208,
+        "visitante": 0.2807
+      }
+    },
+    "sporting-gijon-vs-real-sociedad-b": {
+      "id": 14083538,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4976,
+        "empate": 0.3108,
+        "visitante": 0.1916
+      }
+    }
+  },
+  "jornada-35": {
+    "ad-ceuta-vs-real-sociedad-b": {
+      "id": 14083542,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3719,
+        "empate": 0.2402,
+        "visitante": 0.3879
+      }
+    },
+    "burgos-club-de-futbol-vs-sporting-gijon": {
+      "id": 14083540,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5384,
+        "empate": 0.2638,
+        "visitante": 0.1978
+      }
+    },
+    "leganes-vs-albacete-balompie": {
+      "id": 14083547,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.305,
+        "empate": 0.2326,
+        "visitante": 0.4624
+      }
+    },
+    "malaga-vs-las-palmas": {
+      "id": 14083556,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5088,
+        "empate": 0.2985,
+        "visitante": 0.1927
+      }
+    },
+    "cordoba-vs-real-zaragoza": {
+      "id": 14083545,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4979,
+        "empate": 0.3149,
+        "visitante": 0.1872
+      }
+    },
+    "granada-vs-cultural-leonesa": {
+      "id": 14083546,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4248,
+        "empate": 0.3465,
+        "visitante": 0.2287
+      }
+    },
+    "huesca-vs-deportivo-la-coruna": {
+      "id": 14083550,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3822,
+        "empate": 0.2918,
+        "visitante": 0.326
+      }
+    },
+    "cadiz-vs-fc-andorra": {
+      "id": 14083558,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5039,
+        "empate": 0.3004,
+        "visitante": 0.1957
+      }
+    },
+    "mirandes-vs-cd-castellon": {
+      "id": 14083548,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5127,
+        "empate": 0.2951,
+        "visitante": 0.1922
+      }
+    },
+    "racing-de-santander-vs-almeria": {
+      "id": 14083557,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4702,
+        "empate": 0.226,
+        "visitante": 0.3038
+      }
+    },
+    "real-valladolid-vs-eibar": {
+      "id": 14083552,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3415,
+        "empate": 0.2576,
+        "visitante": 0.4009
+      }
+    }
+  },
+  "jornada-36": {
+    "real-sociedad-b-vs-racing-de-santander": {
+      "id": 14081731,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3015,
+        "empate": 0.2503,
+        "visitante": 0.4482
+      }
+    },
+    "las-palmas-vs-leganes": {
+      "id": 14081747,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3073,
+        "empate": 0.2561,
+        "visitante": 0.4366
+      }
+    },
+    "real-zaragoza-vs-ad-ceuta": {
+      "id": 14081728,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4516,
+        "empate": 0.2674,
+        "visitante": 0.281
+      }
+    },
+    "cd-castellon-vs-burgos-club-de-futbol": {
+      "id": 14081726,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3799,
+        "empate": 0.2472,
+        "visitante": 0.3729
+      }
+    },
+    "cultural-leonesa-vs-cordoba": {
+      "id": 14081723,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3521,
+        "empate": 0.3418,
+        "visitante": 0.3061
+      }
+    },
+    "fc-andorra-vs-real-valladolid": {
+      "id": 14081725,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.455,
+        "empate": 0.2992,
+        "visitante": 0.2458
+      }
+    },
+    "sporting-gijon-vs-cadiz": {
+      "id": 14081722,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3262,
+        "empate": 0.3148,
+        "visitante": 0.359
+      }
+    },
+    "albacete-balompie-vs-granada": {
+      "id": 14083559,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3241,
+        "empate": 0.2693,
+        "visitante": 0.4066
+      }
+    },
+    "eibar-vs-huesca": {
+      "id": 14083563,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5468,
+        "empate": 0.3032,
+        "visitante": 0.15
+      }
+    },
+    "almeria-vs-malaga": {
+      "id": 14081736,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4304,
+        "empate": 0.309,
+        "visitante": 0.2606
+      }
+    },
+    "deportivo-la-coruna-vs-mirandes": {
+      "id": 14083560,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5076,
+        "empate": 0.3209,
+        "visitante": 0.1715
+      }
+    }
+  },
+  "jornada-37": {
+    "ad-ceuta-vs-racing-de-santander": {
+      "id": 14081737,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3418,
+        "empate": 0.2242,
+        "visitante": 0.434
+      }
+    },
+    "albacete-balompie-vs-eibar": {
+      "id": 14081741,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3652,
+        "empate": 0.2548,
+        "visitante": 0.38
+      }
+    },
+    "burgos-club-de-futbol-vs-deportivo-la-coruna": {
+      "id": 14081729,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.337,
+        "empate": 0.3426,
+        "visitante": 0.3204
+      }
+    },
+    "cadiz-vs-las-palmas": {
+      "id": 14081749,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5166,
+        "empate": 0.2609,
+        "visitante": 0.2225
+      }
+    },
+    "cordoba-vs-sporting-gijon": {
+      "id": 14081745,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.457,
+        "empate": 0.2714,
+        "visitante": 0.2716
+      }
+    },
+    "granada-vs-almeria": {
+      "id": 14081750,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5269,
+        "empate": 0.2797,
+        "visitante": 0.1934
+      }
+    },
+    "huesca-vs-real-zaragoza": {
+      "id": 14081740,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3515,
+        "empate": 0.2521,
+        "visitante": 0.3964
+      }
+    },
+    "leganes-vs-fc-andorra": {
+      "id": 14081739,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4316,
+        "empate": 0.2542,
+        "visitante": 0.3142
+      }
+    },
+    "mirandes-vs-cultural-leonesa": {
+      "id": 14081748,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4378,
+        "empate": 0.3367,
+        "visitante": 0.2255
+      }
+    },
+    "malaga-vs-cd-castellon": {
+      "id": 14081724,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3878,
+        "empate": 0.2485,
+        "visitante": 0.3637
+      }
+    },
+    "real-valladolid-vs-real-sociedad-b": {
+      "id": 14081732,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5493,
+        "empate": 0.2862,
+        "visitante": 0.1645
+      }
+    }
+  },
+  "jornada-38": {
+    "almeria-vs-mirandes": {
+      "id": 14081742,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3045,
+        "empate": 0.2261,
+        "visitante": 0.4694
+      }
+    },
+    "cd-castellon-vs-cordoba": {
+      "id": 14081746,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3096,
+        "empate": 0.3016,
+        "visitante": 0.3888
+      }
+    },
+    "cultural-leonesa-vs-cadiz": {
+      "id": 14081733,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4939,
+        "empate": 0.2749,
+        "visitante": 0.2312
+      }
+    },
+    "deportivo-la-coruna-vs-leganes": {
+      "id": 14081738,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2972,
+        "empate": 0.2696,
+        "visitante": 0.4332
+      }
+    },
+    "eibar-vs-malaga": {
+      "id": 14081735,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.549,
+        "empate": 0.2888,
+        "visitante": 0.1622
+      }
+    },
+    "fc-andorra-vs-albacete-balompie": {
+      "id": 14081744,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5181,
+        "empate": 0.3319,
+        "visitante": 0.15
+      }
+    },
+    "las-palmas-vs-real-valladolid": {
+      "id": 14081727,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2831,
+        "empate": 0.3137,
+        "visitante": 0.4032
+      }
+    },
+    "racing-de-santander-vs-huesca": {
+      "id": 14081730,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4641,
+        "empate": 0.2898,
+        "visitante": 0.2461
+      }
+    },
+    "real-sociedad-b-vs-burgos-club-de-futbol": {
+      "id": 14081743,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.352,
+        "empate": 0.3033,
+        "visitante": 0.3447
+      }
+    },
+    "real-zaragoza-vs-granada": {
+      "id": 14081734,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3101,
+        "empate": 0.2765,
+        "visitante": 0.4134
+      }
+    },
+    "sporting-gijon-vs-ad-ceuta": {
+      "id": 14081721,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4025,
+        "empate": 0.344,
+        "visitante": 0.2535
+      }
+    }
+  },
+  "jornada-39": {
+    "ad-ceuta-vs-cd-castellon": {
+      "id": 14081756,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5165,
+        "empate": 0.2542,
+        "visitante": 0.2293
+      }
+    },
+    "albacete-balompie-vs-cultural-leonesa": {
+      "id": 14081755,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4152,
+        "empate": 0.2432,
+        "visitante": 0.3416
+      }
+    },
+    "burgos-club-de-futbol-vs-almeria": {
+      "id": 14081760,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5168,
+        "empate": 0.3332,
+        "visitante": 0.15
+      }
+    },
+    "cadiz-vs-deportivo-la-coruna": {
+      "id": 14081751,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3606,
+        "empate": 0.3031,
+        "visitante": 0.3363
+      }
+    },
+    "cordoba-vs-granada": {
+      "id": 14081752,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4444,
+        "empate": 0.2399,
+        "visitante": 0.3157
+      }
+    },
+    "fc-andorra-vs-las-palmas": {
+      "id": 14081758,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4859,
+        "empate": 0.2901,
+        "visitante": 0.224
+      }
+    },
+    "huesca-vs-real-sociedad-b": {
+      "id": 14081753,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4902,
+        "empate": 0.2889,
+        "visitante": 0.2209
+      }
+    },
+    "leganes-vs-racing-de-santander": {
+      "id": 14081764,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2802,
+        "empate": 0.2621,
+        "visitante": 0.4577
+      }
+    },
+    "mirandes-vs-eibar": {
+      "id": 14081763,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2853,
+        "empate": 0.3408,
+        "visitante": 0.3739
+      }
+    },
+    "malaga-vs-sporting-gijon": {
+      "id": 14081754,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5173,
+        "empate": 0.3281,
+        "visitante": 0.1546
+      }
+    },
+    "real-valladolid-vs-real-zaragoza": {
+      "id": 14081757,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.363,
+        "empate": 0.2275,
+        "visitante": 0.4095
+      }
+    }
+  },
+  "jornada-40": {
+    "ad-ceuta-vs-malaga": {
+      "id": 14081759,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5069,
+        "empate": 0.3431,
+        "visitante": 0.15
+      }
+    },
+    "almeria-vs-las-palmas": {
+      "id": 14081761,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3031,
+        "empate": 0.2832,
+        "visitante": 0.4137
+      }
+    },
+    "cd-castellon-vs-cadiz": {
+      "id": 14081766,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2987,
+        "empate": 0.3189,
+        "visitante": 0.3824
+      }
+    },
+    "cultural-leonesa-vs-eibar": {
+      "id": 14081776,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4868,
+        "empate": 0.2367,
+        "visitante": 0.2765
+      }
+    },
+    "cordoba-vs-albacete-balompie": {
+      "id": 14081762,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4083,
+        "empate": 0.2915,
+        "visitante": 0.3002
+      }
+    },
+    "deportivo-la-coruna-vs-fc-andorra": {
+      "id": 14081771,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3516,
+        "empate": 0.3334,
+        "visitante": 0.315
+      }
+    },
+    "granada-vs-burgos-club-de-futbol": {
+      "id": 14081777,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3942,
+        "empate": 0.2475,
+        "visitante": 0.3583
+      }
+    },
+    "leganes-vs-huesca": {
+      "id": 14081768,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4256,
+        "empate": 0.3149,
+        "visitante": 0.2595
+      }
+    },
+    "racing-de-santander-vs-real-valladolid": {
+      "id": 14081765,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3343,
+        "empate": 0.2605,
+        "visitante": 0.4052
+      }
+    },
+    "real-sociedad-b-vs-mirandes": {
+      "id": 14081769,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5455,
+        "empate": 0.3045,
+        "visitante": 0.15
+      }
+    },
+    "real-zaragoza-vs-sporting-gijon": {
+      "id": 14081767,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3983,
+        "empate": 0.2873,
+        "visitante": 0.3144
+      }
+    }
+  },
+  "jornada-41": {
+    "albacete-balompie-vs-real-sociedad-b": {
+      "id": 14081770,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3127,
+        "empate": 0.2492,
+        "visitante": 0.4381
+      }
+    },
+    "cultural-leonesa-vs-burgos-club-de-futbol": {
+      "id": 14081781,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3713,
+        "empate": 0.2965,
+        "visitante": 0.3322
+      }
+    },
+    "cadiz-vs-leganes": {
+      "id": 14081774,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3421,
+        "empate": 0.2486,
+        "visitante": 0.4093
+      }
+    },
+    "eibar-vs-cordoba": {
+      "id": 14081782,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.2992,
+        "empate": 0.302,
+        "visitante": 0.3988
+      }
+    },
+    "fc-andorra-vs-ad-ceuta": {
+      "id": 14081780,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3418,
+        "empate": 0.3377,
+        "visitante": 0.3205
+      }
+    },
+    "huesca-vs-cd-castellon": {
+      "id": 14081772,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5121,
+        "empate": 0.2292,
+        "visitante": 0.2587
+      }
+    },
+    "las-palmas-vs-real-zaragoza": {
+      "id": 14081773,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3443,
+        "empate": 0.307,
+        "visitante": 0.3487
+      }
+    },
+    "mirandes-vs-granada": {
+      "id": 14081779,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3378,
+        "empate": 0.2372,
+        "visitante": 0.425
+      }
+    },
+    "malaga-vs-racing-de-santander": {
+      "id": 14081775,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5326,
+        "empate": 0.2942,
+        "visitante": 0.1732
+      }
+    },
+    "real-valladolid-vs-deportivo-la-coruna": {
+      "id": 14081778,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4076,
+        "empate": 0.322,
+        "visitante": 0.2704
+      }
+    },
+    "sporting-gijon-vs-almeria": {
+      "id": 14081783,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.498,
+        "empate": 0.2448,
+        "visitante": 0.2572
+      }
+    }
+  },
+  "jornada-42": {
+    "ad-ceuta-vs-albacete-balompie": {
+      "id": 14083412,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3062,
+        "empate": 0.276,
+        "visitante": 0.4178
+      }
+    },
+    "almeria-vs-real-valladolid": {
+      "id": 14083406,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3944,
+        "empate": 0.2807,
+        "visitante": 0.3249
+      }
+    },
+    "burgos-club-de-futbol-vs-fc-andorra": {
+      "id": 14081785,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4769,
+        "empate": 0.3075,
+        "visitante": 0.2156
+      }
+    },
+    "cd-castellon-vs-eibar": {
+      "id": 14081784,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5457,
+        "empate": 0.2328,
+        "visitante": 0.2215
+      }
+    },
+    "cordoba-vs-huesca": {
+      "id": 14081787,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3887,
+        "empate": 0.2641,
+        "visitante": 0.3472
+      }
+    },
+    "deportivo-la-coruna-vs-las-palmas": {
+      "id": 14083395,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.5127,
+        "empate": 0.2523,
+        "visitante": 0.235
+      }
+    },
+    "granada-vs-sporting-gijon": {
+      "id": 14083399,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3314,
+        "empate": 0.2783,
+        "visitante": 0.3903
+      }
+    },
+    "leganes-vs-mirandes": {
+      "id": 14083403,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3939,
+        "empate": 0.2562,
+        "visitante": 0.3499
+      }
+    },
+    "racing-de-santander-vs-cadiz": {
+      "id": 14083415,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3474,
+        "empate": 0.34,
+        "visitante": 0.3126
+      }
+    },
+    "real-sociedad-b-vs-cultural-leonesa": {
+      "id": 14081786,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.3996,
+        "empate": 0.332,
+        "visitante": 0.2684
+      }
+    },
+    "real-zaragoza-vs-malaga": {
+      "id": 14081788,
+      "resultado": "",
+      "pronostico": {
+        "local": 0.4286,
+        "empate": 0.2266,
+        "visitante": 0.3448
+      }
+    }
+  }
+}
