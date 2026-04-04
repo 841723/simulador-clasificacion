@@ -258,9 +258,10 @@ export function SimulationProvider({ children }) {
       state.baseStandings,
       state.allMatches,
       state.results,
-      state.lockedMatchIds
+      state.lockedMatchIds,
+      state.scores
     );
-  }, [state.baseStandings, state.allMatches, state.results, state.lockedMatchIds]);
+  }, [state.baseStandings, state.allMatches, state.results, state.lockedMatchIds, state.scores]);
 
   const value = {
     state,

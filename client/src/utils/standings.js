@@ -91,11 +91,18 @@ export function buildInitialResults(allMatches, standingsRows, lockedMatchIds = 
 }
 
 /**
+ * Returns true if the match result has been changed from its original/default value.
+ */
+export function isModified(matchId, state) {
+  return state.results[matchId] !== state.originalResults[matchId];
+}
+
+/**
  * Calculate projected standings from base standings + simulated match results.
  * Base standings already incorporate locked/played matches.
  * We apply only unlocked (pending) match results on top.
  */
-export function calculateProjectedStandings(baseStandingsRows, allMatches, results, lockedMatchIds = {}) {
+export function calculateProjectedStandings(baseStandingsRows, allMatches, results, lockedMatchIds = {}, scores = {}) {
   // Deep clone base standings into a mutable map
   const map = {};
   for (const row of baseStandingsRows) {
@@ -123,26 +130,36 @@ export function calculateProjectedStandings(baseStandingsRows, allMatches, resul
     const away = map[match.awayTeam];
     if (!home || !away) continue;
 
+    const score = scores[match.id] || { home: 0, away: 0 };
+
     home.played += 1;
     away.played += 1;
 
     if (result === '1') {
       home.wins += 1;
       home.points += 3;
-      home.scoresFor += 1;
+      home.scoresFor += score.home;
+      home.scoresAgainst += score.away;
       away.losses += 1;
-      away.scoresAgainst += 1;
+      away.scoresFor += score.away;
+      away.scoresAgainst += score.home;
     } else if (result === 'X') {
       home.draws += 1;
       home.points += 1;
+      home.scoresFor += score.home;
+      home.scoresAgainst += score.away;
       away.draws += 1;
       away.points += 1;
+      away.scoresFor += score.away;
+      away.scoresAgainst += score.home;
     } else if (result === '2') {
       away.wins += 1;
       away.points += 3;
-      away.scoresFor += 1;
+      away.scoresFor += score.away;
+      away.scoresAgainst += score.home;
       home.losses += 1;
-      home.scoresAgainst += 1;
+      home.scoresFor += score.home;
+      home.scoresAgainst += score.away;
     }
   }
 
