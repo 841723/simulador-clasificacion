@@ -4,6 +4,7 @@ import { Logo } from "./Logo.jsx";
 const TABS = [
   { id: 'jornada', label: 'Jornadas' },
   { id: 'teams', label: 'Equipos' },
+  { id: 'clasificacion', label: 'Clasificación' },
 ];
 
 export default function Header() {

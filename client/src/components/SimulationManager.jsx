@@ -2,32 +2,54 @@ import { useState } from 'react';
 import { useSimulation } from '../context/SimulationContext';
 
 export default function SimulationManager() {
-  const { state, dispatch } = useSimulation();
+  const { state, dispatch, saveSimulationToAPI, loadSimulationFromAPI, deleteSimulationFromAPI } = useSimulation();
   const [simName, setSimName] = useState('');
   const [showLoad, setShowLoad] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const savedNames = Object.keys(state.savedSimulations);
+  const savedSims = Object.values(state.savedSimulations);
 
-  function handleSave() {
+  async function handleSave() {
     const name = simName.trim();
     if (!name) {
       setSaveError('Escribe un nombre');
       return;
     }
     setSaveError('');
-    dispatch({ type: 'SAVE_SIMULATION', payload: { name } });
-    setSimName('');
+    setBusy(true);
+    try {
+      await saveSimulationToAPI(name);
+      setSimName('');
+    } catch (e) {
+      setSaveError(e.message || 'Error al guardar');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function handleLoad(name) {
-    dispatch({ type: 'LOAD_SIMULATION', payload: { name } });
-    setShowLoad(false);
+  async function handleLoad(uuid) {
+    setBusy(true);
+    try {
+      await loadSimulationFromAPI(uuid);
+    } catch (e) {
+      console.error('Error loading simulation:', e);
+    } finally {
+      setBusy(false);
+      setShowLoad(false);
+    }
   }
 
-  function handleDelete(name) {
+  async function handleDelete(uuid, name) {
     if (window.confirm(`¿Eliminar la simulación "${name}"?`)) {
-      dispatch({ type: 'DELETE_SIMULATION', payload: { name } });
+      setBusy(true);
+      try {
+        await deleteSimulationFromAPI(uuid);
+      } catch (e) {
+        console.error('Error deleting simulation:', e);
+      } finally {
+        setBusy(false);
+      }
     }
   }
 
@@ -55,7 +77,8 @@ export default function SimulationManager() {
           />
           <button
             onClick={handleSave}
-            className="px-2.5 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 font-medium transition-colors whitespace-nowrap"
+            disabled={busy}
+            className="px-2.5 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 font-medium transition-colors whitespace-nowrap disabled:opacity-50"
           >
             Guardar
           </button>
@@ -66,31 +89,31 @@ export default function SimulationManager() {
         <div className="relative">
           <button
             onClick={() => setShowLoad((v) => !v)}
-            disabled={savedNames.length === 0}
+            disabled={savedSims.length === 0}
             className="px-2.5 py-1.5 bg-gray-100 text-gray-700 text-xs rounded-lg hover:bg-gray-200 font-medium transition-colors disabled:opacity-40 border border-gray-300 whitespace-nowrap"
           >
-            Cargar {savedNames.length > 0 ? `(${savedNames.length})` : ''}
+            Cargar {savedSims.length > 0 ? `(${savedSims.length})` : ''}
           </button>
-          {showLoad && savedNames.length > 0 && (
+          {showLoad && savedSims.length > 0 && (
             <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-50 min-w-50">
-              {savedNames.map((name) => (
+              {savedSims.map((sim) => (
                 <div
-                  key={name}
+                  key={sim.uuid}
                   className={`flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b last:border-0 ${
-                    name === state.activeSimulationName ? 'bg-blue-50' : ''
+                    sim.uuid === state.activeSimulationUuid ? 'bg-blue-50' : ''
                   }`}
                 >
                   <button
-                    onClick={() => handleLoad(name)}
+                    onClick={() => handleLoad(sim.uuid)}
                     className="text-xs text-gray-700 hover:text-blue-600 font-medium truncate flex-1 text-left flex items-center gap-1"
                   >
-                    {name === state.activeSimulationName && (
+                    {sim.uuid === state.activeSimulationUuid && (
                       <span className="text-yellow-500">●</span>
                     )}
-                    {name}
+                    {sim.name}
                   </button>
                   <button
-                    onClick={() => handleDelete(name)}
+                    onClick={() => handleDelete(sim.uuid, sim.name)}
                     className="text-gray-400 hover:text-rose-500 ml-2 text-xs shrink-0"
                     title="Eliminar simulación"
                   >

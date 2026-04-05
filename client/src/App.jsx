@@ -4,10 +4,12 @@ import SimulationManager from "./components/SimulationManager";
 import JornadaView from "./components/JornadaView";
 import TeamView from "./components/TeamView";
 import StandingsTable from "./components/StandingsTable";
+import ClasificacionView from "./components/ClasificacionView";
 import { Logo } from "./components/Logo";
 
 function AppContent() {
     const { state } = useSimulation();
+    const isClasificacion = state.activeView === "clasificacion";
 
     if (state.loading) {
         return (
@@ -36,16 +38,22 @@ function AppContent() {
     }
 
     return (
-        <div className='h-screen bg-gray-100 flex flex-col'>
+        <div className='h-screen bg-gray-100 flex flex-col overflow-hidden'>
             <Header />
-            <SimulationManager />
+            {!isClasificacion && <SimulationManager />}
 
-            <main className='grid grid-cols-[3fr_1fr] p-4 relative'>
-                {/* Main content */}
-                {state.activeView === "jornada" && <JornadaView />}
-                {state.activeView === "teams" && <TeamView />}
-                <StandingsTable />
-            </main>
+            {isClasificacion ? (
+                <main className='flex-1 overflow-hidden'>
+                    <ClasificacionView />
+                </main>
+            ) : (
+                <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto'>
+                    {/* Main content */}
+                    {state.activeView === "jornada" && <JornadaView />}
+                    {state.activeView === "teams" && <TeamView />}
+                    <StandingsTable />
+                </main>
+            )}
         </div>
     );
 }
