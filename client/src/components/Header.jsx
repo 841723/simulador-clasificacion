@@ -26,18 +26,16 @@ export default function Header() {
               <select
                 className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 disabled:opacity-70"
                 defaultValue="laliga2"
-                disabled
                 title="Selección de liga (próximamente)"
               >
                 <option value="laliga2">LaLiga 2</option>
               </select>
               <select
                 className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 disabled:opacity-70"
-                defaultValue="2024-25"
-                disabled
+                defaultValue="2025-26"
                 title="Selección de temporada (próximamente)"
               >
-                <option value="2024-25">2024-25</option>
+                <option value="2025-26">2025-26</option>
               </select>
             </div>
           </div>

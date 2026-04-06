@@ -38,7 +38,8 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    command: sh -c "npm run migrate && npm run seed && npm run dev"
+    # command: sh -c "npm run migrate && npm run seed && npm run dev"
+    command: sh -c "npm run dev"
     environment:
       NODE_ENV: development
       PORT: 3001

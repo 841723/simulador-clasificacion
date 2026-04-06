@@ -10,7 +10,7 @@ import {
 const SimulationContext = createContext(null);
 
 // Default season id – can be overridden via VITE_SEASON_ID env var
-const SEASON_ID = import.meta.env.VITE_SEASON_ID || 22;
+const SEASON_ID = import.meta.env.VITE_SEASON_ID || 1;
 
 const initialState = {
   loading: true,

@@ -1,6 +1,7 @@
 import { useSimulation } from '../context/SimulationContext';
 import { isMatchLocked, isModified, parseResultado } from '../utils/standings';
 import TeamLogo from './TeamLogo';
+import { LeftArrowIcon, RightArrowIcon } from './Arrow.jsx';
 
 const RESULT_OPTIONS = [
     { value: "1", label: "1", title: "Local gana" },
@@ -163,19 +164,23 @@ export default function JornadaView() {
         .sort((a, b) => a.startTimestamp - b.startTimestamp);
 
     return (
-        <div className="px-2 py-4">
+        <div className='px-2 py-4'>
             {/* Jornada navigator */}
-            <div className="flex items-center justify-between mb-5 gap-2">
+            <div className='flex items-center justify-between mb-5 gap-2'>
                 <button
                     disabled={jornada <= JORNADAS[0]}
-                    onClick={() => dispatch({ type: 'SET_JORNADA', payload: jornada - 1 })}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors"
+                    onClick={() =>
+                        dispatch({ type: "SET_JORNADA", payload: jornada - 1 })
+                    }
+                    className='px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors'
                 >
-                    ←
+                    <LeftArrowIcon className="w-5 h-5" />
                 </button>
-                <div className="flex flex-col items-center gap-1 flex-1">
-                    <h2 className="text-lg font-bold text-gray-800">Jornada {jornada}</h2>
-                    <div className="flex gap-0.5 flex-wrap justify-center">
+                <div className='flex flex-col items-center gap-1 flex-1'>
+                    <h2 className='text-lg font-bold text-gray-800'>
+                        Jornada {jornada}
+                    </h2>
+                    {/* <div className="flex gap-0.5 flex-wrap justify-center">
                         {JORNADAS.map((j) => (
                             <button
                                 key={j}
@@ -189,74 +194,95 @@ export default function JornadaView() {
                                 {j}
                             </button>
                         ))}
-                    </div>
+                    </div> */}
                 </div>
                 <button
                     disabled={jornada >= JORNADAS[JORNADAS.length - 1]}
-                    onClick={() => dispatch({ type: 'SET_JORNADA', payload: jornada + 1 })}
-                    className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors"
+                    onClick={() =>
+                        dispatch({ type: "SET_JORNADA", payload: jornada + 1 })
+                    }
+                    className='px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors'
                 >
-                    →
+                    <RightArrowIcon className="w-5 h-5" />
                 </button>
             </div>
 
             {/* Match list */}
             {matches.length === 0 ? (
-                <p className="text-center text-gray-500">Cargando partidos...</p>
+                <p className='text-center text-gray-500'>
+                    Cargando partidos...
+                </p>
             ) : (
-                <div className="space-y-3">
+                <div className='space-y-3'>
                     {matches.map((match) => {
-                        const locked = isMatchLocked(match.id, state.lockedMatchIds);
+                        const locked = isMatchLocked(
+                            match.id,
+                            state.lockedMatchIds,
+                        );
                         const modified = isModified(match.id, state);
                         // For locked matches, determine winning team name
-                        const scoreStr = locked ? state.lockedMatchIds[match.id] : null;
-                        const winnerResult = scoreStr ? parseResultado(scoreStr) : null;
-                        const homeWins = winnerResult === '1';
-                        const awayWins = winnerResult === '2';
+                        const scoreStr = locked
+                            ? state.lockedMatchIds[match.id]
+                            : null;
+                        const winnerResult = scoreStr
+                            ? parseResultado(scoreStr)
+                            : null;
+                        const homeWins = winnerResult === "1";
+                        const awayWins = winnerResult === "2";
 
                         return (
                             <div
                                 key={match.id}
                                 className={`rounded-xl border p-3 sm:p-4 flex items-center justify-between gap-3 transition-all ${
                                     locked
-                                        ? 'bg-gray-50 border-gray-200 opacity-80'
+                                        ? "bg-gray-50 border-gray-200 opacity-80"
                                         : modified
-                                        ? 'bg-white border-yellow-400 border-t-4'
-                                        : 'bg-white border-gray-200'
+                                          ? "bg-white border-yellow-400 border-t-4"
+                                          : "bg-white border-gray-200"
                                 }`}
                             >
                                 {/* Home team */}
-                                <div className="flex flex-col items-end gap-1 flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 justify-end w-full">
-                                        <span className={`font-semibold text-sm truncate ${
-                                            locked
-                                                ? homeWins
-                                                    ? 'text-gray-900 font-black'
-                                                    : 'text-gray-400'
-                                                : 'text-gray-800'
-                                        }`}>
+                                <div className='flex flex-col items-end gap-1 flex-1 min-w-0'>
+                                    <div className='flex items-center gap-2 justify-end w-full'>
+                                        <span
+                                            className={`font-semibold text-sm truncate ${
+                                                locked
+                                                    ? homeWins
+                                                        ? "text-gray-900 font-black"
+                                                        : "text-gray-500"
+                                                    : "text-gray-800"
+                                            }`}
+                                        >
                                             {match.homeTeam}
                                         </span>
-                                        <TeamLogo teamName={match.homeTeam} size="md" />
+                                        <TeamLogo
+                                            teamName={match.homeTeam}
+                                            size='md'
+                                        />
                                     </div>
                                 </div>
 
                                 {/* Center: inputs / score */}
-                                <div className="flex flex-col items-center gap-1 shrink-0 min-w-37.5">
+                                <div className='flex flex-col items-center gap-1 shrink-0 min-w-37.5'>
                                     <ResultSelector match={match} />
                                 </div>
 
                                 {/* Away team */}
-                                <div className="flex flex-col items-start gap-1 flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 justify-start w-full">
-                                        <TeamLogo teamName={match.awayTeam} size="md" />
-                                        <span className={`font-semibold text-sm truncate ${
-                                            locked
-                                                ? awayWins
-                                                    ? 'text-gray-900 font-black'
-                                                    : 'text-gray-400'
-                                                : 'text-gray-800'
-                                        }`}>
+                                <div className='flex flex-col items-start gap-1 flex-1 min-w-0'>
+                                    <div className='flex items-center gap-2 justify-start w-full'>
+                                        <TeamLogo
+                                            teamName={match.awayTeam}
+                                            size='md'
+                                        />
+                                        <span
+                                            className={`font-semibold text-sm truncate ${
+                                                locked
+                                                    ? awayWins
+                                                        ? "text-gray-900 font-black"
+                                                        : "text-gray-500"
+                                                    : "text-gray-800"
+                                            }`}
+                                        >
                                             {match.awayTeam}
                                         </span>
                                     </div>
