@@ -59,6 +59,7 @@ export default function Header() {
             <NavLink
               key={tab.path}
               to={tab.path}
+              end={false}
               className={({ isActive }) =>
                 `px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   isActive
