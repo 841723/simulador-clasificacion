@@ -27,25 +27,31 @@ function getHighestProbResult(pronostico) {
  */
 function PronosticoDisplay({ pronostico, highlightResult }) {
     const pills = [
-        { key: '1',  label: 'L', value: pronostico.local },
-        { key: 'X',  label: 'E', value: pronostico.empate },
-        { key: '2',  label: 'V', value: pronostico.visitante },
+        { key: '1', value: pronostico.local },
+        { key: 'X', value: pronostico.empate },
+        { key: '2', value: pronostico.visitante },
     ];
     return (
         <div className='flex gap-1 mt-1 justify-center flex-wrap'>
-            {pills.map(({ key, label, value }) => {
+            {pills.map(({ key, value }) => {
                 const isHighlighted = key === highlightResult;
                 return (
                     <span
                         key={key}
-                        title={key === '1' ? 'Local' : key === 'X' ? 'Empate' : 'Visitante'}
-                        className={`px-1.5 py-0.5 rounded text-xs border ${
+                        title={
+                            key === "1"
+                                ? "Local"
+                                : key === "X"
+                                  ? "Empate"
+                                  : "Visitante"
+                        }
+                        className={`px-1.5 py-0.5 rounded text-xs border border-gray-200 text-gray-500 ${
                             isHighlighted
-                                ? 'font-black border-blue-400 bg-blue-50 text-blue-700'
-                                : 'font-medium border-gray-200 text-gray-500'
+                                ? "bg-blue-100/60 border-blue-300 text-blue-800"
+                                : ""
                         }`}
                     >
-                        {label} {(value * 100).toFixed(0)}%
+                        {(value * 100).toFixed(0)}%
                     </span>
                 );
             })}
