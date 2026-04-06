@@ -39,7 +39,7 @@ function MatchCell({ match, teamName }) {
     return (
         <td
             className={`border border-gray-200 p-2 align-top min-w-37.5 ${
-                modified ? "bg-yellow-50" : ""
+                modified ? "border-l-4 border-l-yellow-400 bg-yellow-50/40" : ""
             }`}
             onClick={(e) => e.stopPropagation()}
         >
