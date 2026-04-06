@@ -16,6 +16,8 @@ const initialState = {
   loading: true,
   error: null,
   seasonId: SEASON_ID,
+  leagueExternalId: null,   // SofaScore uniqueTournament id
+  seasonExternalId: null,   // SofaScore season id
   baseStandings: [],          // raw rows from API
   allMatches: [],             // flat list of all matches
   results: {},                // matchId → "1" | "X" | "2"
@@ -35,7 +37,7 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'LOAD_DATA': {
-      const { baseStandings, allMatches, lockedMatchIds, pronosticos } = action.payload;
+      const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId } = action.payload;
       const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
       const scores = buildInitialScores(allMatches, results, lockedMatchIds);
       const jornadas = [...new Set(allMatches.map((m) => m.jornada))].sort((a, b) => a - b);
@@ -50,6 +52,8 @@ function reducer(state, action) {
         originalScores: { ...scores },
         lockedMatchIds,
         pronosticos,
+        leagueExternalId: leagueExternalId ?? state.leagueExternalId,
+        seasonExternalId: seasonExternalId ?? state.seasonExternalId,
         currentJornada: jornadas[0] ?? 1,
       };
     }
@@ -180,10 +184,11 @@ export function SimulationProvider({ children }) {
   useEffect(() => {
     async function fetchAll() {
       try {
-        const [standingsRes, matchesRes, teamsRes] = await Promise.all([
+        const [standingsRes, matchesRes, teamsRes, seasonsRes] = await Promise.all([
           fetch(`/api/seasons/${SEASON_ID}/standings`),
           fetch(`/api/seasons/${SEASON_ID}/matches`),
           fetch('/api/teams'),
+          fetch('/api/seasons'),
         ]);
 
         if (!standingsRes.ok) throw new Error(`Standings API error: ${standingsRes.status}`);
@@ -192,6 +197,12 @@ export function SimulationProvider({ children }) {
         const baseStandings = await standingsRes.json();
         const matchesData = await matchesRes.json();
         const teamsData = teamsRes.ok ? await teamsRes.json() : [];
+        const seasonsData = seasonsRes.ok ? await seasonsRes.json() : [];
+
+        // Extract external IDs for the current season
+        const currentSeasonInfo = seasonsData.find((s) => String(s.id) === String(SEASON_ID));
+        const leagueExternalId = currentSeasonInfo?.leagueExternalId ?? null;
+        const seasonExternalId = currentSeasonInfo?.seasonExternalId ?? null;
 
         // Build team images map: slug → imageUrl
         const images = {};
@@ -239,7 +250,7 @@ export function SimulationProvider({ children }) {
 
         dispatch({
           type: 'LOAD_DATA',
-          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos },
+          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId },
         });
       } catch (err) {
         dispatch({ type: 'LOAD_ERROR', payload: err.message });
@@ -316,6 +327,8 @@ export function SimulationProvider({ children }) {
     loadSimulationFromAPI,
     deleteSimulationFromAPI,
     SEASON_ID,
+    leagueExternalId: state.leagueExternalId,
+    seasonExternalId: state.seasonExternalId,
   };
   return (
     <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>

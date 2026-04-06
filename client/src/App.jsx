@@ -81,7 +81,12 @@ function AppContent() {
                     </>
                 } />
 
-                {/* Clasificación */}
+                {/* Clasificación – with optional league/season/jornada URL params */}
+                <Route path="/clasificacion/:leagueExtId/:seasonExtId/:jornada" element={
+                    <main className='flex-1 overflow-hidden'>
+                        <ClasificacionView />
+                    </main>
+                } />
                 <Route path="/clasificacion" element={
                     <main className='flex-1 overflow-hidden'>
                         <ClasificacionView />

@@ -6,6 +6,13 @@
  *
  * The script is idempotent: running it multiple times won't duplicate data
  * because every INSERT uses ON CONFLICT DO NOTHING / DO UPDATE.
+ *
+ * Strategy (all 42 jornadas):
+ *  - base_standings is seeded with zeros (all stats start at 0).
+ *  - All 42 jornadas are loaded as matches.
+ *  - Finished matches are locked with their actual score.
+ *  - Unfinished matches are unlocked (pronostico only, user simulates).
+ *  - calculateProjectedStandings on the client applies ALL matches from scratch.
  */
 
 import 'dotenv/config';
@@ -17,11 +24,22 @@ import pool from '../db/connection.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = resolve(__dirname, '../../../public'); // /repo-root/public
 
+const ALL_JORNADAS = Array.from({ length: 42 }, (_, i) => i + 1);
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function readJSON(path) {
   return JSON.parse(readFileSync(path, 'utf8'));
+}
+
+/** Returns "H-A" string for a finished match, or null if not finished. */
+function lockedScoreFromEvent(e) {
+  if (e.status?.type !== 'finished') return null;
+  const h = e.homeScore?.current;
+  const a = e.awayScore?.current;
+  if (h == null || a == null) return null;
+  return `${h}-${a}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -32,10 +50,9 @@ async function seed() {
   try {
     await client.query('BEGIN');
 
-    // ── 1. Build slug→name map from jornada data (most accurate source) ───
-    const JORNADAS = [34, 35, 36, 37, 38, 39, 40, 41, 42];
+    // ── 1. Build slug→name map from ALL jornada data ───────────────────────
     const slugToName = {}; // slug → human-readable name
-    for (const j of JORNADAS) {
+    for (const j of ALL_JORNADAS) {
       const data = readJSON(join(PUBLIC_DIR, 'jornadas', `${j}.json`));
       for (const e of data.events) {
         slugToName[e.homeTeam.slug] = e.homeTeam.name;
@@ -43,36 +60,48 @@ async function seed() {
       }
     }
 
-    // ── 2. League ──────────────────────────────────────────────────────────
+    // ── 2. Extract league/season external IDs from jornada 1 ──────────────
+    const j1data = readJSON(join(PUBLIC_DIR, 'jornadas', '1.json'));
+    const sampleEvent = j1data.events[0];
+    const leagueExtId = sampleEvent.tournament?.uniqueTournament?.id ?? null;
+    const seasonExtId = sampleEvent.season?.id ?? null;
+    const leagueName = sampleEvent.tournament?.uniqueTournament?.name ?? 'LaLiga 2';
+    const seasonName = sampleEvent.season?.name ?? 'LaLiga 2 25/26';
+    const seasonYear = sampleEvent.season?.year ?? '25/26';
+
+    // ── 3. League ──────────────────────────────────────────────────────────
     const leagueRes = await client.query(
-      `INSERT INTO leagues (name, slug, country)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
+      `INSERT INTO leagues (name, slug, country, external_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (slug) DO UPDATE
+         SET name        = EXCLUDED.name,
+             external_id = EXCLUDED.external_id
        RETURNING id`,
-      ['LaLiga 2', 'laliga2', 'Spain'],
+      [leagueName, 'laliga2', 'Spain', leagueExtId],
     );
     const leagueId = leagueRes.rows[0].id;
-    console.log(`League id: ${leagueId}`);
+    console.log(`League id: ${leagueId} (external: ${leagueExtId})`);
 
-    // ── 3. Season ──────────────────────────────────────────────────────────
+    // ── 4. Season ──────────────────────────────────────────────────────────
     const seasonRes = await client.query(
-      `INSERT INTO seasons (league_id, year, name)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (league_id, year) DO UPDATE SET name = EXCLUDED.name
+      `INSERT INTO seasons (league_id, year, name, external_id)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (league_id, year) DO UPDATE
+         SET name        = EXCLUDED.name,
+             external_id = EXCLUDED.external_id
        RETURNING id`,
-      [leagueId, '2024-25', 'LaLiga 2 2024-25'],
+      [leagueId, seasonYear, seasonName, seasonExtId],
     );
     const seasonId = seasonRes.rows[0].id;
-    console.log(`Season id: ${seasonId}`);
+    console.log(`Season id: ${seasonId} (external: ${seasonExtId})`);
 
-    // ── 4. Teams ───────────────────────────────────────────────────────────
+    // ── 5. Teams ───────────────────────────────────────────────────────────
     const teamsData = readJSON(join(PUBLIC_DIR, 'teams.json'));
     const teamIdBySlug = {};
 
     for (const [slug, info] of Object.entries(teamsData)) {
       const imageUrl = info.imagen ?? null;
       const externalId = info.id ?? null;
-      // Use the name from jornada data if available, else fall back to slug
       const name = slugToName[slug] || slug.split('-').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
       const res = await client.query(
@@ -87,18 +116,15 @@ async function seed() {
       );
       teamIdBySlug[slug] = res.rows[0].id;
 
-      // Link team to season
       await client.query(
-        `INSERT INTO season_teams (season_id, team_id)
-         VALUES ($1, $2)
-         ON CONFLICT DO NOTHING`,
+        `INSERT INTO season_teams (season_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
         [seasonId, res.rows[0].id],
       );
     }
     console.log(`Upserted ${Object.keys(teamsData).length} teams`);
 
-    // ── 5. Ensure all teams from jornada data exist ────────────────────────
-    for (const j of JORNADAS) {
+    // ── 6. Ensure all teams from all jornadas exist ────────────────────────
+    for (const j of ALL_JORNADAS) {
       const data = readJSON(join(PUBLIC_DIR, 'jornadas', `${j}.json`));
       for (const e of data.events) {
         for (const teamInfo of [e.homeTeam, e.awayTeam]) {
@@ -120,21 +146,23 @@ async function seed() {
       }
     }
 
-    // ── 6. Matches ─────────────────────────────────────────────────────────
-    // Load resultados for locked status + pronosticos
+    // ── 7. Load pronosticos from resultados.json ───────────────────────────
+    // resultados.json only covers jornadas 34-42 (simulation window)
     const resultados = readJSON(join(PUBLIC_DIR, 'resultados.json'));
-    const resultadosById = {};
+    const pronosticosById = {};
     for (const jornadaMatches of Object.values(resultados)) {
       for (const match of Object.values(jornadaMatches)) {
-        resultadosById[match.id] = {
-          resultado: match.resultado || '',
-          pronostico: match.pronostico || null,
-        };
+        if (match.pronostico) {
+          pronosticosById[match.id] = match.pronostico;
+        }
       }
     }
 
+    // ── 8. Matches (all 42 jornadas) ──────────────────────────────────────
+    // Lock strategy: a match is locked if its status is 'finished'.
+    // The actual score from the JSON is used as the locked result.
     let matchCount = 0;
-    for (const j of JORNADAS) {
+    for (const j of ALL_JORNADAS) {
       const data = readJSON(join(PUBLIC_DIR, 'jornadas', `${j}.json`));
       for (const e of data.events) {
         const homeTeamId = teamIdBySlug[e.homeTeam.slug];
@@ -145,23 +173,21 @@ async function seed() {
           continue;
         }
 
-        const res = resultadosById[e.id] || { resultado: '', pronostico: null };
-        const isLocked = res.resultado !== '';
-        const lockedResult = isLocked ? res.resultado : null;
+        const lockedResult = lockedScoreFromEvent(e);
+        const isLocked = lockedResult !== null;
+
         let homeScore = null;
         let awayScore = null;
         if (isLocked) {
-          const parts = res.resultado.split('-');
+          const parts = lockedResult.split('-');
           homeScore = parseInt(parts[0], 10);
           awayScore = parseInt(parts[1], 10);
-        } else {
-          homeScore = e.homeScore?.current ?? null;
-          awayScore = e.awayScore?.current ?? null;
         }
 
-        const probHome = res.pronostico?.local ?? null;
-        const probDraw = res.pronostico?.empate ?? null;
-        const probAway = res.pronostico?.visitante ?? null;
+        const pronos = pronosticosById[e.id] ?? null;
+        const probHome = pronos?.local ?? null;
+        const probDraw = pronos?.empate ?? null;
+        const probAway = pronos?.visitante ?? null;
 
         await client.query(
           `INSERT INTO matches
@@ -202,59 +228,30 @@ async function seed() {
     }
     console.log(`Upserted ${matchCount} matches`);
 
-    // ── 7. Base standings ──────────────────────────────────────────────────
-    const standingsFile = join(PUBLIC_DIR, 'standings', '2026-04-04-16-55.json');
-    const standingsData = readJSON(standingsFile);
-    const rows = standingsData.standings[0].rows;
+    // ── 9. Base standings (zeros) ──────────────────────────────────────────
+    // The client calculates standings from scratch by applying all match results,
+    // so base_standings represents the start of season (everything at 0).
     let standingsCount = 0;
-
-    for (const row of rows) {
-      const slug = row.team.slug;
-      let teamId = teamIdBySlug[slug];
-      if (!teamId) {
-        const createRes = await client.query(
-          `INSERT INTO teams (name, slug) VALUES ($1, $2)
-           ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name
-           RETURNING id`,
-          [row.team.name, slug],
-        );
-        teamId = createRes.rows[0].id;
-        teamIdBySlug[slug] = teamId;
-        await client.query(
-          `INSERT INTO season_teams (season_id, team_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
-          [seasonId, teamId],
-        );
-      }
-
+    let position = 1;
+    for (const [slug, teamId] of Object.entries(teamIdBySlug)) {
       await client.query(
         `INSERT INTO base_standings
            (season_id, team_id, position, played, wins, draws, losses, goals_for, goals_against, points)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+         VALUES ($1,$2,$3,0,0,0,0,0,0,0)
          ON CONFLICT (season_id, team_id) DO UPDATE SET
            position      = EXCLUDED.position,
-           played        = EXCLUDED.played,
-           wins          = EXCLUDED.wins,
-           draws         = EXCLUDED.draws,
-           losses        = EXCLUDED.losses,
-           goals_for     = EXCLUDED.goals_for,
-           goals_against = EXCLUDED.goals_against,
-           points        = EXCLUDED.points`,
-        [
-          seasonId,
-          teamId,
-          row.position,
-          row.played || 0,
-          row.wins,
-          row.draws,
-          row.losses,
-          row.scoresFor,
-          row.scoresAgainst,
-          row.points,
-        ],
+           played        = 0,
+           wins          = 0,
+           draws         = 0,
+           losses        = 0,
+           goals_for     = 0,
+           goals_against = 0,
+           points        = 0`,
+        [seasonId, teamId, position++],
       );
       standingsCount++;
     }
-    console.log(`Upserted ${standingsCount} base standings rows`);
+    console.log(`Upserted ${standingsCount} base standings rows (all zeros)`);
 
     await client.query('COMMIT');
     console.log('Seed completed successfully.');

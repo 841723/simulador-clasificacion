@@ -4,18 +4,20 @@
 
 -- Leagues (e.g., LaLiga 2, Primera División)
 CREATE TABLE IF NOT EXISTS leagues (
-  id        SERIAL PRIMARY KEY,
-  name      VARCHAR(100) NOT NULL,
-  slug      VARCHAR(50)  NOT NULL UNIQUE,
-  country   VARCHAR(50)
+  id          SERIAL PRIMARY KEY,
+  name        VARCHAR(100) NOT NULL,
+  slug        VARCHAR(50)  NOT NULL UNIQUE,
+  country     VARCHAR(50),
+  external_id INTEGER                    -- e.g. SofaScore uniqueTournament id
 );
 
 -- Seasons (e.g., 2024-25 for LaLiga 2)
 CREATE TABLE IF NOT EXISTS seasons (
-  id         SERIAL PRIMARY KEY,
-  league_id  INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
-  year       VARCHAR(10) NOT NULL,   -- e.g. "2024-25"
-  name       VARCHAR(100),
+  id          SERIAL PRIMARY KEY,
+  league_id   INTEGER NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+  year        VARCHAR(10) NOT NULL,   -- e.g. "2024-25"
+  name        VARCHAR(100),
+  external_id INTEGER,                -- e.g. SofaScore season id
   UNIQUE (league_id, year)
 );
 
@@ -91,3 +93,7 @@ CREATE TABLE IF NOT EXISTS simulation_results (
   away_score     INTEGER,
   UNIQUE (simulation_id, match_id)
 );
+
+-- Idempotent column additions for existing databases
+ALTER TABLE leagues  ADD COLUMN IF NOT EXISTS external_id INTEGER;
+ALTER TABLE seasons  ADD COLUMN IF NOT EXISTS external_id INTEGER;

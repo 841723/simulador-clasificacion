@@ -52,7 +52,9 @@ app.get('/api/seasons', async (_req, res, next) => {
     // Lazily import pool to avoid circular deps
     const { default: pool } = await import('./db/connection.js');
     const { rows } = await pool.query(
-      `SELECT s.id, s.year, s.name, l.name AS "leagueName", l.slug AS "leagueSlug"
+      `SELECT s.id, s.year, s.name, s.external_id AS "seasonExternalId",
+              l.name AS "leagueName", l.slug AS "leagueSlug", l.id AS "leagueId",
+              l.external_id AS "leagueExternalId"
        FROM seasons s JOIN leagues l ON l.id = s.league_id
        ORDER BY s.id DESC`,
     );

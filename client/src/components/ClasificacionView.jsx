@@ -1,4 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from '../context/SimulationContext';
 import {
   runMonteCarloSimulations,
@@ -8,9 +9,6 @@ import {
 import { calculateProjectedStandings } from '../utils/standings';
 import TeamLogo from './TeamLogo';
 
-// Maximum jornada supported by the UI (prepared for up to 42)
-const MAX_JORNADA = 42;
-
 // ── Zone definitions ───────────────────────────────────────────────────────────
 const ZONES = [
   { key: 'ascenso',  label: 'Ascenso directo', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
@@ -18,9 +16,6 @@ const ZONES = [
   { key: 'mid',      label: 'Permanencia',      color: 'bg-gray-300',    textColor: 'text-gray-500'    },
   { key: 'descenso', label: 'Descenso',         color: 'bg-rose-400',    textColor: 'text-rose-600'    },
 ];
-
-// Minimum probability (%) to render a zone segment in the bar chart
-const MIN_PROB_PCT = 0.1;
 
 function getZoneBorder(position) {
   if (position <= 2) return 'border-l-4 border-emerald-500';
@@ -44,35 +39,32 @@ function FormDot({ result, isLocked }) {
   );
 }
 
-// ── Zone probability bar + 4 percentages ──────────────────────────────────────
+// ── Zone probability display (text only, no bar) ───────────────────────────────
 function ZoneProbDisplay({ probs }) {
   if (!probs) return <span className="text-gray-300 text-xs">—</span>;
 
+  const formatted = ZONES.map(({ key, textColor }) => {
+    const pct = probs[key] || 0;
+    let label = null;
+    if (pct === 0) {
+      label = null;
+    } else if (pct < 1) {
+      label = '<1%';
+    } else {
+      label = `${Math.round(pct)}%`;
+    }
+    return label ? { key, textColor, label } : null;
+  }).filter(Boolean);
+
+  if (formatted.length === 0) return <span className="text-gray-300 text-xs">—</span>;
+
   return (
-    <div className="flex flex-col items-center gap-1 min-w-0">
-      {/* Stacked bar */}
-      <div className="flex gap-px h-2.5 w-28 rounded overflow-hidden" title="Probabilidades por zona">
-        {ZONES.map(({ key, color }) => {
-          const pct = probs[key] || 0;
-          if (pct < MIN_PROB_PCT) return null;
-          return (
-            <div
-              key={key}
-              className={`${color} h-full`}
-              style={{ width: `${pct}%` }}
-              title={`${ZONES.find(z => z.key === key)?.label}: ${pct}%`}
-            />
-          );
-        })}
-      </div>
-      {/* All 4 percentages */}
-      <div className="flex gap-1.5 flex-wrap justify-center">
-        {ZONES.map(({ key, textColor }) => (
-          <span key={key} className={`text-xs font-semibold ${textColor}`}>
-            {(probs[key] || 0).toFixed(1)}%
-          </span>
-        ))}
-      </div>
+    <div className="flex gap-1.5 flex-wrap justify-center">
+      {formatted.map(({ key, textColor, label }) => (
+        <span key={key} className={`text-xs font-semibold ${textColor}`}>
+          {label}
+        </span>
+      ))}
     </div>
   );
 }
@@ -95,7 +87,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
             <th className="px-2 py-2 text-center w-8 text-gray-300">GC</th>
             <th className="px-2 py-2 text-center w-10 text-gray-300">DG</th>
             <th className="px-2 py-2 text-center min-w-28">Últimos 5</th>
-            <th className="px-2 py-2 text-center min-w-32">
+            <th className="px-2 py-2 text-center min-w-24">
               <div>Probabilidades</div>
               <div className="flex gap-1.5 justify-center font-normal text-gray-400 mt-0.5">
                 {ZONES.map(z => (
@@ -300,7 +292,6 @@ function MatchCalendar({ allMatches, pronosticos, lockedMatchIds, results, selec
                 // Pronostico highlight logic (same as JornadaView)
                 let pronosticoHighlight = null;
                 if (isLocked) {
-                  // Show pronostico of actual outcome (null for draw)
                   pronosticoHighlight = result === 'X' ? null : result;
                 } else if (pronos) {
                   const max = Math.max(pronos.local, pronos.empate, pronos.visitante);
@@ -395,32 +386,96 @@ function MatchCalendar({ allMatches, pronosticos, lockedMatchIds, results, selec
   );
 }
 
+// ── Jornada selector ───────────────────────────────────────────────────────────
+function JornadaSelector({ jornadas, effectiveEvalJornada, onChange }) {
+  // Group into rows of 7 for a compact grid
+  const groups = [];
+  const GROUP_SIZE = 7;
+  for (let i = 0; i < jornadas.length; i += GROUP_SIZE) {
+    groups.push(jornadas.slice(i, i + GROUP_SIZE));
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5">
+      {groups.map((group, gi) => (
+        <div key={gi} className="flex gap-0.5">
+          {group.map((j) => (
+            <button
+              key={j}
+              onClick={() => onChange(j)}
+              className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
+                j === effectiveEvalJornada
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+              title={`Jornada ${j}`}
+            >
+              {j}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Compute current jornada from matches ───────────────────────────────────────
+function computeCurrentJornada(allMatches, maxJornada = 42) {
+  const nowTs = Math.floor(Date.now() / 1000);
+  // Find the earliest future match
+  let minFutureTs = Infinity;
+  let currentJornada = maxJornada;
+  for (const m of allMatches) {
+    if (m.startTimestamp && m.startTimestamp >= nowTs) {
+      if (m.startTimestamp < minFutureTs) {
+        minFutureTs = m.startTimestamp;
+        currentJornada = m.jornada;
+      }
+    }
+  }
+  return currentJornada;
+}
+
 // ── Main ClasificacionView ─────────────────────────────────────────────────────
 export default function ClasificacionView() {
-  const { state, JORNADAS } = useSimulation();
+  const { state, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const params = useParams();
+  const navigate = useNavigate();
 
-  // All available jornadas: combine JORNADAS from data + fill up to MAX_JORNADA
-  const allJornadas = useMemo(() => {
-    const fromData = JORNADAS.length > 0 ? JORNADAS : [];
-    // Build list 1..max(MAX_JORNADA, last jornada in data)
-    const last = Math.max(MAX_JORNADA, fromData[fromData.length - 1] ?? 0);
-    return Array.from({ length: last }, (_, i) => i + 1);
-  }, [JORNADAS]);
+  // Compute the "current" jornada (next match's jornada) once matches are loaded
+  const autoJornada = useMemo(
+    () => state.allMatches.length > 0 ? computeCurrentJornada(state.allMatches) : null,
+    [state.allMatches],
+  );
 
-  // evalJornada: the jornada up to which we evaluate classification.
-  // null = "use latest" (resolved below). Allows user to override.
-  const lastDataJornada = JORNADAS[JORNADAS.length - 1] ?? null;
-  const [evalJornada, setEvalJornada] = useState(null);
+  // evalJornada: from URL param if provided and valid, else auto jornada
+  const urlJornada = params.jornada ? parseInt(params.jornada, 10) : null;
+  const effectiveEvalJornada = useMemo(() => {
+    if (urlJornada && !isNaN(urlJornada) && urlJornada >= 1 && urlJornada <= 42) return urlJornada;
+    return autoJornada ?? (JORNADAS[JORNADAS.length - 1] ?? 42);
+  }, [urlJornada, autoJornada, JORNADAS]);
 
-  // Resolve: user override takes priority; otherwise use the last data jornada
-  const effectiveEvalJornada = evalJornada ?? lastDataJornada;
+  // When auto jornada is computed and no URL jornada is set, redirect to the canonical URL
+  useEffect(() => {
+    if (!params.jornada && leagueExternalId && seasonExternalId && autoJornada) {
+      navigate(
+        `/clasificacion/${leagueExternalId}/${seasonExternalId}/${autoJornada}`,
+        { replace: true },
+      );
+    }
+  }, [params.jornada, leagueExternalId, seasonExternalId, autoJornada, navigate]);
+
+  // When jornada changes, update URL
+  const handleJornadaChange = (j) => {
+    if (leagueExternalId && seasonExternalId) {
+      navigate(`/clasificacion/${leagueExternalId}/${seasonExternalId}/${j}`);
+    }
+  };
 
   // Filter matches to those in the evaluation window
   const filteredMatches = useMemo(
-    () => effectiveEvalJornada === null
-      ? []
-      : state.allMatches.filter((m) => m.jornada <= effectiveEvalJornada),
+    () => state.allMatches.filter((m) => m.jornada <= effectiveEvalJornada),
     [state.allMatches, effectiveEvalJornada],
   );
 
@@ -477,62 +532,52 @@ export default function ClasificacionView() {
     );
   }
 
+  const lastJornada = JORNADAS[JORNADAS.length - 1] ?? 42;
+  const firstJornada = JORNADAS[0] ?? 1;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Jornada evaluator toolbar ── */}
-      <div className="px-4 py-2 bg-white border-b border-gray-200 flex items-center gap-3 shrink-0 flex-wrap">
-        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-          Clasificación hasta:
-        </span>
-        <div className="flex items-center gap-1">
-          <button
-            disabled={effectiveEvalJornada === null || effectiveEvalJornada <= (JORNADAS[0] ?? 1)}
-            onClick={() => setEvalJornada((effectiveEvalJornada ?? 1) - 1)}
-            className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
-          >
-            ←
-          </button>
-          <span className="min-w-24 text-center text-sm font-bold text-gray-800">
-            Jornada {effectiveEvalJornada ?? '…'}
+      <div className="px-4 py-2 bg-white border-b border-gray-200 flex items-start gap-4 shrink-0 flex-wrap">
+        <div className="flex flex-col gap-1 pt-0.5">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+            Clasificación hasta jornada:
           </span>
-          <button
-            disabled={effectiveEvalJornada === null || effectiveEvalJornada >= (lastDataJornada ?? 0)}
-            onClick={() => setEvalJornada((effectiveEvalJornada ?? lastDataJornada ?? 1) + 1)}
-            className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
-          >
-            →
-          </button>
-        </div>
-
-        {/* Jornada selector pills (up to 42) */}
-        <div className="flex gap-0.5 flex-wrap">
-          {allJornadas.map((j) => {
-            const hasData = JORNADAS.includes(j);
-            if (!hasData) return null; // Only show jornadas with actual data
-            return (
+          <div className="flex items-center gap-1.5">
+            <button
+              disabled={effectiveEvalJornada <= firstJornada}
+              onClick={() => handleJornadaChange(effectiveEvalJornada - 1)}
+              className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            >
+              ←
+            </button>
+            <span className="min-w-16 text-center text-sm font-bold text-gray-800 bg-blue-50 rounded px-2 py-1">
+              J{effectiveEvalJornada}
+            </span>
+            <button
+              disabled={effectiveEvalJornada >= lastJornada}
+              onClick={() => handleJornadaChange(effectiveEvalJornada + 1)}
+              className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
+            >
+              →
+            </button>
+            {autoJornada && effectiveEvalJornada !== autoJornada && (
               <button
-                key={j}
-                onClick={() => setEvalJornada(j)}
-                className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                  j === effectiveEvalJornada
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
+                onClick={() => handleJornadaChange(autoJornada)}
+                className="text-xs text-blue-500 hover:text-blue-700 underline ml-1"
               >
-                {j}
+                Actual
               </button>
-            );
-          })}
+            )}
+          </div>
         </div>
 
-        {evalJornada !== null && evalJornada !== lastDataJornada && (
-          <button
-            onClick={() => setEvalJornada(lastDataJornada)}
-            className="text-xs text-blue-500 hover:text-blue-700 underline ml-auto"
-          >
-            Restablecer
-          </button>
-        )}
+        {/* Jornada grid selector */}
+        <JornadaSelector
+          jornadas={JORNADAS}
+          effectiveEvalJornada={effectiveEvalJornada}
+          onChange={handleJornadaChange}
+        />
       </div>
 
       {/* ── Main content: standings + calendar ── */}
