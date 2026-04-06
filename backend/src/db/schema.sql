@@ -94,6 +94,26 @@ CREATE TABLE IF NOT EXISTS simulation_results (
   UNIQUE (simulation_id, match_id)
 );
 
+-- Probability sources (e.g., betting odds, equal weights)
+CREATE TABLE IF NOT EXISTS probability_sources (
+  id          SERIAL PRIMARY KEY,
+  slug        VARCHAR(50)  NOT NULL UNIQUE,
+  name        VARCHAR(100) NOT NULL,
+  description TEXT
+);
+
+-- Per-match probabilities keyed by source
+CREATE TABLE IF NOT EXISTS match_probabilities (
+  id          SERIAL PRIMARY KEY,
+  match_id    INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+  source_id   INTEGER NOT NULL REFERENCES probability_sources(id) ON DELETE CASCADE,
+  prob_home   NUMERIC(6,4) NOT NULL,
+  prob_draw   NUMERIC(6,4) NOT NULL,
+  prob_away   NUMERIC(6,4) NOT NULL,
+  updated_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (match_id, source_id)
+);
+
 -- Idempotent column additions for existing databases
 ALTER TABLE leagues  ADD COLUMN IF NOT EXISTS external_id INTEGER;
 ALTER TABLE seasons  ADD COLUMN IF NOT EXISTS external_id INTEGER;

@@ -6,6 +6,7 @@ import {
   calculateProjectedStandings,
   isMatchLocked,
 } from '../utils/standings';
+import { computeCurrentJornada } from '../utils/navigation';
 
 const SimulationContext = createContext(null);
 
@@ -30,7 +31,7 @@ const initialState = {
   activeSimulationName: null, // name of currently loaded/saved simulation
   activeSimulationUuid: null, // uuid of currently loaded/saved simulation
   selectedTeams: [],
-  currentJornada: null,       // set to first jornada after data loads
+  currentJornada: null,       // computed from next future match after data loads
   activeView: 'jornada',      // 'jornada' | 'teams' | 'clasificacion'
 };
 
@@ -54,7 +55,7 @@ function reducer(state, action) {
         pronosticos,
         leagueExternalId: leagueExternalId ?? state.leagueExternalId,
         seasonExternalId: seasonExternalId ?? state.seasonExternalId,
-        currentJornada: jornadas[0] ?? 1,
+        currentJornada: computeCurrentJornada(allMatches, jornadas[jornadas.length - 1] ?? 42),
       };
     }
     case 'LOAD_ERROR':
@@ -162,6 +163,23 @@ export function SimulationProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [teamImages, setTeamImages] = React.useState({});
   const [teamSlugMap, setTeamSlugMap] = React.useState({});
+  const [probSources, setProbSources] = React.useState([]);
+  const [selectedProbSource, setSelectedProbSource] = React.useState('odds');
+
+  // ── Load probability sources on mount ─────────────────────────────────
+  useEffect(() => {
+    async function loadProbSources() {
+      try {
+        const res = await fetch('/api/probability-sources');
+        if (!res.ok) return;
+        const sources = await res.json();
+        setProbSources(sources);
+      } catch {
+        // silently ignore
+      }
+    }
+    loadProbSources();
+  }, []);
 
   // ── Load saved simulations from API on mount ────────────────────────────
   useEffect(() => {
@@ -329,6 +347,9 @@ export function SimulationProvider({ children }) {
     SEASON_ID,
     leagueExternalId: state.leagueExternalId,
     seasonExternalId: state.seasonExternalId,
+    probSources,
+    selectedProbSource,
+    setProbSource: setSelectedProbSource,
   };
   return (
     <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>

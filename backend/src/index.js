@@ -10,6 +10,7 @@ import leaguesRouter from './routes/leagues.js';
 import matchesRouter from './routes/matches.js';
 import standingsRouter from './routes/standings.js';
 import simulationsRouter from './routes/simulations.js';
+import probabilitySourcesRouter from './routes/probability_sources.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -45,6 +46,7 @@ app.use('/api/leagues', leaguesRouter);
 app.use('/api/seasons/:seasonId/matches', matchesRouter);
 app.use('/api/seasons/:seasonId/standings', standingsRouter);
 app.use('/api/simulations', simulationsRouter);
+app.use('/api/probability-sources', probabilitySourcesRouter);
 
 // Convenience shortcut: GET /api/seasons returns the default season id
 app.get('/api/seasons', async (_req, res, next) => {

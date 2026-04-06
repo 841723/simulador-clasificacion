@@ -6,33 +6,73 @@ const router = Router({ mergeParams: true });
 // GET /api/seasons/:seasonId/matches
 router.get('/', async (req, res, next) => {
   try {
-    const { rows } = await pool.query(
-      `SELECT
-         m.id,
-         m.jornada,
-         m.start_timestamp        AS "startTimestamp",
-         m.home_score             AS "homeScore",
-         m.away_score             AS "awayScore",
-         m.status,
-         m.winner_code            AS "winnerCode",
-         m.is_locked              AS "isLocked",
-         m.locked_result          AS "lockedResult",
-         m.prob_home              AS "probHome",
-         m.prob_draw              AS "probDraw",
-         m.prob_away              AS "probAway",
-         ht.name                  AS "homeTeamName",
-         ht.slug                  AS "homeTeamSlug",
-         ht.image_url             AS "homeTeamImageUrl",
-         at.name                  AS "awayTeamName",
-         at.slug                  AS "awayTeamSlug",
-         at.image_url             AS "awayTeamImageUrl"
-       FROM matches m
-       JOIN teams ht ON ht.id = m.home_team_id
-       JOIN teams at ON at.id = m.away_team_id
-       WHERE m.season_id = $1
-       ORDER BY m.jornada, m.start_timestamp`,
-      [req.params.seasonId],
-    );
+    const { sourceSlug } = req.query;
+
+    let rows;
+    if (sourceSlug) {
+      // JOIN with match_probabilities filtered by the requested source slug
+      const result = await pool.query(
+        `SELECT
+           m.id,
+           m.jornada,
+           m.start_timestamp        AS "startTimestamp",
+           m.home_score             AS "homeScore",
+           m.away_score             AS "awayScore",
+           m.status,
+           m.winner_code            AS "winnerCode",
+           m.is_locked              AS "isLocked",
+           m.locked_result          AS "lockedResult",
+           COALESCE(mp.prob_home, m.prob_home) AS "probHome",
+           COALESCE(mp.prob_draw, m.prob_draw) AS "probDraw",
+           COALESCE(mp.prob_away, m.prob_away) AS "probAway",
+           ht.name                  AS "homeTeamName",
+           ht.slug                  AS "homeTeamSlug",
+           ht.image_url             AS "homeTeamImageUrl",
+           at.name                  AS "awayTeamName",
+           at.slug                  AS "awayTeamSlug",
+           at.image_url             AS "awayTeamImageUrl"
+         FROM matches m
+         JOIN teams ht ON ht.id = m.home_team_id
+         JOIN teams at ON at.id = m.away_team_id
+         LEFT JOIN match_probabilities mp
+           ON mp.match_id = m.id
+          AND mp.source_id = (SELECT id FROM probability_sources WHERE slug = $2)
+         WHERE m.season_id = $1
+         ORDER BY m.jornada, m.start_timestamp`,
+        [req.params.seasonId, sourceSlug],
+      );
+      rows = result.rows;
+    } else {
+      // Default: use matches.prob_home/draw/away for backwards compat
+      const result = await pool.query(
+        `SELECT
+           m.id,
+           m.jornada,
+           m.start_timestamp        AS "startTimestamp",
+           m.home_score             AS "homeScore",
+           m.away_score             AS "awayScore",
+           m.status,
+           m.winner_code            AS "winnerCode",
+           m.is_locked              AS "isLocked",
+           m.locked_result          AS "lockedResult",
+           m.prob_home              AS "probHome",
+           m.prob_draw              AS "probDraw",
+           m.prob_away              AS "probAway",
+           ht.name                  AS "homeTeamName",
+           ht.slug                  AS "homeTeamSlug",
+           ht.image_url             AS "homeTeamImageUrl",
+           at.name                  AS "awayTeamName",
+           at.slug                  AS "awayTeamSlug",
+           at.image_url             AS "awayTeamImageUrl"
+         FROM matches m
+         JOIN teams ht ON ht.id = m.home_team_id
+         JOIN teams at ON at.id = m.away_team_id
+         WHERE m.season_id = $1
+         ORDER BY m.jornada, m.start_timestamp`,
+        [req.params.seasonId],
+      );
+      rows = result.rows;
+    }
 
     // Shape the response to match the format the frontend expects
     const matches = rows.map((r) => ({

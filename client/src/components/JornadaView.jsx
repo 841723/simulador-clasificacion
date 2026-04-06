@@ -1,7 +1,10 @@
+import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from '../context/SimulationContext';
 import { isMatchLocked, isModified, parseResultado } from '../utils/standings';
 import TeamLogo from './TeamLogo';
-import { LeftArrowIcon, RightArrowIcon } from './Arrow.jsx';
+
+const EQUAL_PRONO = { local: 1 / 3, empate: 1 / 3, visitante: 1 / 3 };
 
 const RESULT_OPTIONS = [
     { value: "1", label: "1", title: "Local gana" },
@@ -74,11 +77,14 @@ function GoalInput({ value, onChange, disabled }) {
 }
 
 export function ResultSelector({ match }) {
-    const { state, dispatch } = useSimulation();
+    const { state, dispatch, selectedProbSource } = useSimulation();
     const locked = isMatchLocked(match.id, state.lockedMatchIds);
     const current = state.results[match.id];
     const score = state.scores[match.id] || { home: 0, away: 0 };
-    const pronostico = state.pronosticos[match.id];
+    const rawPronostico = state.pronosticos[match.id];
+    const pronostico = selectedProbSource === 'equal' && !locked
+        ? EQUAL_PRONO
+        : rawPronostico;
 
     const handleGoalChange = (side, val) => {
         const newHome = side === 'home' ? val : score.home;
@@ -156,8 +162,38 @@ export function ResultSelector({ match }) {
 }
 
 export default function JornadaView() {
-    const { state, dispatch, JORNADAS } = useSimulation();
-    const jornada = state.currentJornada;
+    const { state, dispatch, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
+    const params = useParams();
+    const navigate = useNavigate();
+
+    // Jornada from URL params takes priority; fall back to context currentJornada
+    const urlJornada = params.jornada ? parseInt(params.jornada, 10) : null;
+    const jornada = (urlJornada && !isNaN(urlJornada)) ? urlJornada : (state.currentJornada ?? JORNADAS[0] ?? 1);
+
+    // On mount without URL jornada, redirect to canonical URL
+    useEffect(() => {
+        if (!params.jornada && leagueExternalId && seasonExternalId && state.currentJornada) {
+            navigate(
+                `/jornadas/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`,
+                { replace: true },
+            );
+        }
+    }, [params.jornada, leagueExternalId, seasonExternalId, state.currentJornada, navigate]);
+
+    // Sync URL jornada back into context so other views that read currentJornada stay in sync
+    useEffect(() => {
+        if (urlJornada && !isNaN(urlJornada) && urlJornada !== state.currentJornada) {
+            dispatch({ type: 'SET_JORNADA', payload: urlJornada });
+        }
+    }, [urlJornada, state.currentJornada, dispatch]);
+
+    const handleJornadaChange = (j) => {
+        if (leagueExternalId && seasonExternalId) {
+            navigate(`/jornadas/${leagueExternalId}/${seasonExternalId}/${j}`);
+        } else {
+            dispatch({ type: 'SET_JORNADA', payload: j });
+        }
+    };
 
     const matches = state.allMatches
         .filter((m) => m.jornada === jornada)
@@ -165,46 +201,23 @@ export default function JornadaView() {
 
     return (
         <div className='px-2 py-4'>
-            {/* Jornada navigator */}
-            <div className='flex items-center justify-between mb-5 gap-2'>
-                <button
-                    disabled={jornada <= JORNADAS[0]}
-                    onClick={() =>
-                        dispatch({ type: "SET_JORNADA", payload: jornada - 1 })
-                    }
-                    className='px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors'
+            {/* Jornada navigator with dropdown */}
+            <div className='flex items-center justify-center mb-5 gap-3'>
+                <label htmlFor="jornada-select" className="text-sm font-semibold text-gray-700 shrink-0">
+                    Jornada:
+                </label>
+                <select
+                    id="jornada-select"
+                    value={jornada}
+                    onChange={(e) => handleJornadaChange(parseInt(e.target.value, 10))}
+                    className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
                 >
-                    <LeftArrowIcon className="w-5 h-5" />
-                </button>
-                <div className='flex flex-col items-center gap-1 flex-1'>
-                    <h2 className='text-lg font-bold text-gray-800'>
-                        Jornada {jornada}
-                    </h2>
-                    {/* <div className="flex gap-0.5 flex-wrap justify-center">
-                        {JORNADAS.map((j) => (
-                            <button
-                                key={j}
-                                onClick={() => dispatch({ type: 'SET_JORNADA', payload: j })}
-                                className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                                    j === jornada
-                                        ? 'bg-blue-600 text-white'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                }`}
-                            >
-                                {j}
-                            </button>
-                        ))}
-                    </div> */}
-                </div>
-                <button
-                    disabled={jornada >= JORNADAS[JORNADAS.length - 1]}
-                    onClick={() =>
-                        dispatch({ type: "SET_JORNADA", payload: jornada + 1 })
-                    }
-                    className='px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-40 hover:bg-blue-700 disabled:hover:bg-blue-600 transition-colors'
-                >
-                    <RightArrowIcon className="w-5 h-5" />
-                </button>
+                    {JORNADAS.map((j) => (
+                        <option key={j} value={j}>
+                            Jornada {j}
+                        </option>
+                    ))}
+                </select>
             </div>
 
             {/* Match list */}

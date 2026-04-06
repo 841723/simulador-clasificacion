@@ -7,6 +7,7 @@ import {
   calculateH2H,
 } from '../utils/monteCarlo';
 import { calculateProjectedStandings } from '../utils/standings';
+import { computeCurrentJornada } from '../utils/navigation';
 import TeamLogo from './TeamLogo';
 
 // ── Zone definitions ───────────────────────────────────────────────────────────
@@ -386,59 +387,26 @@ function MatchCalendar({ allMatches, pronosticos, lockedMatchIds, results, selec
   );
 }
 
-// ── Jornada selector ───────────────────────────────────────────────────────────
+// ── Jornada selector (dropdown) ────────────────────────────────────────────────
 function JornadaSelector({ jornadas, effectiveEvalJornada, onChange }) {
-  // Group into rows of 7 for a compact grid
-  const groups = [];
-  const GROUP_SIZE = 7;
-  for (let i = 0; i < jornadas.length; i += GROUP_SIZE) {
-    groups.push(jornadas.slice(i, i + GROUP_SIZE));
-  }
-
   return (
-    <div className="flex flex-col gap-0.5">
-      {groups.map((group, gi) => (
-        <div key={gi} className="flex gap-0.5">
-          {group.map((j) => (
-            <button
-              key={j}
-              onClick={() => onChange(j)}
-              className={`w-7 h-7 rounded text-xs font-semibold transition-colors ${
-                j === effectiveEvalJornada
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              title={`Jornada ${j}`}
-            >
-              {j}
-            </button>
-          ))}
-        </div>
+    <select
+      value={effectiveEvalJornada}
+      onChange={(e) => onChange(parseInt(e.target.value, 10))}
+      className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
+    >
+      {jornadas.map((j) => (
+        <option key={j} value={j}>
+          Jornada {j}
+        </option>
       ))}
-    </div>
+    </select>
   );
-}
-
-// ── Compute current jornada from matches ───────────────────────────────────────
-function computeCurrentJornada(allMatches, maxJornada = 42) {
-  const nowTs = Math.floor(Date.now() / 1000);
-  // Find the earliest future match
-  let minFutureTs = Infinity;
-  let currentJornada = maxJornada;
-  for (const m of allMatches) {
-    if (m.startTimestamp && m.startTimestamp >= nowTs) {
-      if (m.startTimestamp < minFutureTs) {
-        minFutureTs = m.startTimestamp;
-        currentJornada = m.jornada;
-      }
-    }
-  }
-  return currentJornada;
 }
 
 // ── Main ClasificacionView ─────────────────────────────────────────────────────
 export default function ClasificacionView() {
-  const { state, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
+  const { state, JORNADAS, leagueExternalId, seasonExternalId, selectedProbSource, setProbSource, probSources } = useSimulation();
   const [selectedTeam, setSelectedTeam] = useState(null);
   const params = useParams();
   const navigate = useNavigate();
@@ -492,18 +460,30 @@ export default function ClasificacionView() {
   }, [state.baseStandings, filteredMatches, state.results, state.lockedMatchIds, state.scores]);
 
   // Zone probabilities via Monte Carlo for the filtered window
+  const effectivePronosticos = useMemo(() => {
+    if (selectedProbSource === 'equal') {
+      const equalProno = { local: 1 / 3, empate: 1 / 3, visitante: 1 / 3 };
+      const result = {};
+      for (const m of filteredMatches) {
+        if (!state.lockedMatchIds[m.id]) result[m.id] = equalProno;
+      }
+      return result;
+    }
+    return state.pronosticos;
+  }, [selectedProbSource, filteredMatches, state.lockedMatchIds, state.pronosticos]);
+
   const zoneProbabilities = useMemo(() => {
     if (state.baseStandings.length === 0) return {};
     return runMonteCarloSimulations(
       filteredMatches,
       state.baseStandings,
       state.lockedMatchIds,
-      state.pronosticos,
+      effectivePronosticos,
       state.scores,
       state.results,
       500,
     );
-  }, [filteredMatches, state.baseStandings, state.lockedMatchIds, state.pronosticos, state.scores, state.results]);
+  }, [filteredMatches, state.baseStandings, state.lockedMatchIds, effectivePronosticos, state.scores, state.results]);
 
   // Last 5 results per team (use filtered matches)
   const last5ByTeam = useMemo(
@@ -533,51 +513,49 @@ export default function ClasificacionView() {
   }
 
   const lastJornada = JORNADAS[JORNADAS.length - 1] ?? 42;
-  const firstJornada = JORNADAS[0] ?? 1;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* ── Jornada evaluator toolbar ── */}
-      <div className="px-4 py-2 bg-white border-b border-gray-200 flex items-start gap-4 shrink-0 flex-wrap">
-        <div className="flex flex-col gap-1 pt-0.5">
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-            Clasificación hasta jornada:
+      <div className="px-4 py-2 bg-white border-b border-gray-200 flex items-center gap-6 shrink-0 flex-wrap">
+        {/* Jornada dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide shrink-0">
+            Hasta jornada:
           </span>
-          <div className="flex items-center gap-1.5">
+          <JornadaSelector
+            jornadas={JORNADAS}
+            effectiveEvalJornada={effectiveEvalJornada}
+            onChange={handleJornadaChange}
+          />
+          {autoJornada && effectiveEvalJornada !== autoJornada && (
             <button
-              disabled={effectiveEvalJornada <= firstJornada}
-              onClick={() => handleJornadaChange(effectiveEvalJornada - 1)}
-              className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
+              onClick={() => handleJornadaChange(autoJornada)}
+              className="text-xs text-blue-500 hover:text-blue-700 underline"
             >
-              ←
+              Actual
             </button>
-            <span className="min-w-16 text-center text-sm font-bold text-gray-800 bg-blue-50 rounded px-2 py-1">
-              J{effectiveEvalJornada}
-            </span>
-            <button
-              disabled={effectiveEvalJornada >= lastJornada}
-              onClick={() => handleJornadaChange(effectiveEvalJornada + 1)}
-              className="px-2 py-1 rounded bg-blue-600 text-white text-xs font-semibold disabled:opacity-40 hover:bg-blue-700 transition-colors"
-            >
-              →
-            </button>
-            {autoJornada && effectiveEvalJornada !== autoJornada && (
-              <button
-                onClick={() => handleJornadaChange(autoJornada)}
-                className="text-xs text-blue-500 hover:text-blue-700 underline ml-1"
-              >
-                Actual
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Jornada grid selector */}
-        <JornadaSelector
-          jornadas={JORNADAS}
-          effectiveEvalJornada={effectiveEvalJornada}
-          onChange={handleJornadaChange}
-        />
+        {/* Probability source selector */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide shrink-0">
+            Probabilidades:
+          </span>
+          <select
+            value={selectedProbSource}
+            onChange={(e) => setProbSource(e.target.value)}
+            className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
+          >
+            <option value="equal">Igual (1/3 cada una)</option>
+            {probSources.map((s) => (
+              <option key={s.slug} value={s.slug}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* ── Main content: standings + calendar ── */}
@@ -611,7 +589,7 @@ export default function ClasificacionView() {
         <div className="w-72 shrink-0 overflow-auto">
           <MatchCalendar
             allMatches={filteredMatches}
-            pronosticos={state.pronosticos}
+            pronosticos={effectivePronosticos}
             lockedMatchIds={state.lockedMatchIds}
             results={state.results}
             selectedTeam={selectedTeam}

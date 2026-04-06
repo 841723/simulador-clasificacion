@@ -56,10 +56,10 @@ function AppContent() {
             <Header />
 
             <Routes>
-                {/* Default redirect */}
+                {/* Default redirect to jornadas */}
                 <Route path="/" element={<Navigate to="/jornadas" replace />} />
 
-                {/* Jornadas */}
+                {/* Jornadas – bare or with full URL params */}
                 <Route path="/jornadas" element={
                     <>
                         <SimulationManager />
@@ -69,25 +69,47 @@ function AppContent() {
                         </main>
                     </>
                 } />
-
-                {/* Equipos */}
-                <Route path="/equipos" element={
+                <Route path="/jornadas/:leagueExtId/:seasonExtId/:jornada" element={
                     <>
                         <SimulationManager />
                         <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
-                            <TeamView />
+                            <JornadaView />
                             <StandingsTable />
                         </main>
                     </>
                 } />
 
-                {/* Clasificación – with optional league/season/jornada URL params */}
-                <Route path="/clasificacion/:leagueExtId/:seasonExtId/:jornada" element={
+                {/* Equipos – bare or with league/season URL params */}
+                <Route path="/equipos" element={
+                    <>
+                        <SimulationManager />
+                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
+                            <TeamView />
+                            <div className="sticky top-0 self-start">
+                                <StandingsTable />
+                            </div>
+                        </main>
+                    </>
+                } />
+                <Route path="/equipos/:leagueExtId/:seasonExtId" element={
+                    <>
+                        <SimulationManager />
+                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
+                            <TeamView />
+                            <div className="sticky top-0 self-start">
+                                <StandingsTable />
+                            </div>
+                        </main>
+                    </>
+                } />
+
+                {/* Clasificación – bare or with league/season/jornada URL params */}
+                <Route path="/clasificacion" element={
                     <main className='flex-1 overflow-hidden'>
                         <ClasificacionView />
                     </main>
                 } />
-                <Route path="/clasificacion" element={
+                <Route path="/clasificacion/:leagueExtId/:seasonExtId/:jornada" element={
                     <main className='flex-1 overflow-hidden'>
                         <ClasificacionView />
                     </main>
@@ -103,3 +125,4 @@ function AppContent() {
 export default function App() {
     return <AppContent />;
 }
+

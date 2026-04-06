@@ -2,14 +2,25 @@ import { NavLink } from 'react-router-dom';
 import { useSimulation } from '../context/SimulationContext';
 import { Logo } from "./Logo.jsx";
 
-const TABS = [
-  { path: '/jornadas',      label: 'Jornadas' },
-  { path: '/equipos',       label: 'Equipos' },
-  { path: '/clasificacion', label: 'Clasificación' },
-];
-
 export default function Header() {
-  const { state } = useSimulation();
+  const { state, leagueExternalId, seasonExternalId } = useSimulation();
+
+  // Build canonical tab paths once external IDs are known
+  const jornadaPath = leagueExternalId && seasonExternalId && state.currentJornada
+    ? `/jornadas/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`
+    : '/jornadas';
+  const equiposPath = leagueExternalId && seasonExternalId
+    ? `/equipos/${leagueExternalId}/${seasonExternalId}`
+    : '/equipos';
+  const clasificacionPath = leagueExternalId && seasonExternalId && state.currentJornada
+    ? `/clasificacion/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`
+    : '/clasificacion';
+
+  const TABS = [
+    { path: jornadaPath,      base: '/jornadas',      label: 'Jornadas' },
+    { path: equiposPath,      base: '/equipos',       label: 'Equipos' },
+    { path: clasificacionPath, base: '/clasificacion', label: 'Clasificación' },
+  ];
 
   return (
     <header className="bg-blue-900 text-white shadow-lg">
@@ -55,7 +66,7 @@ export default function Header() {
         <nav className="flex gap-1 shrink-0">
           {TABS.map((tab) => (
             <NavLink
-              key={tab.path}
+              key={tab.base}
               to={tab.path}
               end={false}
               className={({ isActive }) =>
@@ -82,3 +93,4 @@ export default function Header() {
     </header>
   );
 }
+

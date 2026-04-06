@@ -228,7 +228,41 @@ async function seed() {
     }
     console.log(`Upserted ${matchCount} matches`);
 
-    // ── 9. Base standings (zeros) ──────────────────────────────────────────
+    // ── 9b. Seed probability sources ───────────────────────────────────────
+    await client.query(
+      `INSERT INTO probability_sources (slug, name, description)
+       VALUES ('odds', 'Cuotas de casas de apuestas',
+         'Probabilidades calculadas a partir de las cuotas ofrecidas por las casas de apuestas, normalizadas para eliminar el margen del bookmaker.')
+       ON CONFLICT (slug) DO UPDATE
+         SET name = EXCLUDED.name,
+             description = EXCLUDED.description`,
+    );
+    console.log('Upserted probability_sources');
+
+    // ── 10. Sync odds into match_probabilities table ───────────────────────
+    const oddsSourceRes = await client.query(
+      `SELECT id FROM probability_sources WHERE slug = 'odds'`,
+    );
+    const oddsSourceId = oddsSourceRes.rows[0].id;
+
+    const matchesWithProbs = await client.query(
+      `SELECT id, prob_home, prob_draw, prob_away FROM matches
+       WHERE season_id = $1 AND prob_home IS NOT NULL`,
+      [seasonId],
+    );
+    for (const m of matchesWithProbs.rows) {
+      await client.query(
+        `INSERT INTO match_probabilities (match_id, source_id, prob_home, prob_draw, prob_away)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (match_id, source_id) DO UPDATE
+           SET prob_home = EXCLUDED.prob_home,
+               prob_draw = EXCLUDED.prob_draw,
+               prob_away = EXCLUDED.prob_away,
+               updated_at = CURRENT_TIMESTAMP`,
+        [m.id, oddsSourceId, m.prob_home, m.prob_draw, m.prob_away],
+      );
+    }
+    console.log(`Synced ${matchesWithProbs.rows.length} match probabilities to match_probabilities table`);
     // The client calculates standings from scratch by applying all match results,
     // so base_standings represents the start of season (everything at 0).
     let standingsCount = 0;

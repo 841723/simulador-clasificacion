@@ -1,7 +1,11 @@
+import { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from "../context/SimulationContext";
 import { isMatchLocked, isModified } from "../utils/standings";
 import { getTeamColor } from "../utils/teamColors";
 import TeamLogo from "./TeamLogo";
+
+const MAX_SELECTED_TEAMS = 5;
 
 function MatchCell({ match, teamName }) {
     const { state, dispatch } = useSimulation();
@@ -93,18 +97,36 @@ function MatchCell({ match, teamName }) {
 }
 
 export default function TeamView() {
-    const { state, dispatch, projectedStandings, JORNADAS } = useSimulation();
+    const { state, dispatch, projectedStandings, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
+    const params = useParams();
+    const navigate = useNavigate();
+
+    // On mount without URL params, redirect to canonical URL
+    useEffect(() => {
+        if (!params.leagueExtId && leagueExternalId && seasonExternalId) {
+            navigate(`/equipos/${leagueExternalId}/${seasonExternalId}`, { replace: true });
+        }
+    }, [params.leagueExtId, leagueExternalId, seasonExternalId, navigate]);
+
+    const nowTs = Math.floor(Date.now() / 1000);
+
+    // Only show future jornadas (where at least one match hasn't started yet)
+    const futureJornadas = JORNADAS.filter((j) =>
+        state.allMatches.some((m) => m.jornada === j && m.startTimestamp && m.startTimestamp > nowTs),
+    );
 
     const allTeams = projectedStandings.map((r) => r.team.name);
     const selected = state.selectedTeams;
+    const atMax = selected.length >= MAX_SELECTED_TEAMS;
 
     function toggleTeam(name) {
+        if (!selected.includes(name) && atMax) return;
         dispatch({ type: "TOGGLE_TEAM", payload: { teamName: name } });
     }
 
-    // Build jornada → matches map for selected teams
+    // Build jornada → matches map for selected teams (future jornadas only)
     const jornadaMatchMap = {};
-    for (const j of JORNADAS) {
+    for (const j of futureJornadas) {
         jornadaMatchMap[j] = {};
         for (const team of selected) {
             const match = state.allMatches.find(
@@ -125,7 +147,7 @@ export default function TeamView() {
             {/* Team selector */}
             <div className='mb-4'>
                 <p className='text-xs font-medium text-gray-500 mb-2'>
-                    Selecciona uno o más equipos:
+                    Selecciona hasta {MAX_SELECTED_TEAMS} equipos:
                 </p>
                 <div className='flex flex-wrap gap-1.5'>
                     {allTeams.map((name) => {
@@ -134,14 +156,18 @@ export default function TeamView() {
                         const pos = projectedStandings.find(
                             (r) => r.team.name === name,
                         )?.position;
+                        const disabled = !isSelected && atMax;
                         return (
                             <button
                                 key={name}
                                 onClick={() => toggleTeam(name)}
+                                disabled={disabled}
                                 className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
                                     isSelected && color
                                         ? `${color.bg} text-white border-transparent`
-                                        : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
+                                        : disabled
+                                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60"
+                                          : "bg-white text-gray-600 border-gray-300 hover:border-blue-400"
                                 }`}
                             >
                                 <TeamLogo teamName={name} size='xs' />
@@ -150,6 +176,11 @@ export default function TeamView() {
                         );
                     })}
                 </div>
+                {atMax && (
+                    <p className="mt-1 text-xs text-amber-600">
+                        Máximo {MAX_SELECTED_TEAMS} equipos seleccionados.
+                    </p>
+                )}
                 {selected.length > 0 && (
                     <button
                         onClick={() =>
@@ -197,77 +228,83 @@ export default function TeamView() {
                         })}
                     </div>
 
-                    {/* Results table */}
-                    <div className='overflow-x-auto rounded-xl shadow border border-gray-200'>
-                        <table className='text-sm border-collapse min-w-full'>
-                            <thead>
-                                <tr>
-                                    <th className='border border-gray-300 px-3 py-2 bg-gray-800 text-white text-left min-w-12.5 text-xs'>
-                                        J
-                                    </th>
-                                    {selected.map((team) => {
-                                        const color = getTeamColor(
-                                            team,
-                                            selected,
-                                        );
-                                        return (
-                                            <th
-                                                key={team}
-                                                className={`border border-gray-300 px-3 py-2 text-left min-w-37.5 ${
-                                                    color
-                                                        ? color.header
-                                                        : "bg-blue-900 text-white"
-                                                }`}
-                                            >
-                                                <div className='flex items-center gap-1.5'>
-                                                    <TeamLogo
-                                                        teamName={team}
-                                                        size='xs'
-                                                    />
-                                                    <span className='text-xs font-semibold'>
-                                                        {team}
-                                                    </span>
-                                                </div>
-                                            </th>
-                                        );
-                                    })}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {JORNADAS.map((j) => (
-                                    <tr
-                                        key={j}
-                                        className='odd:bg-white even:bg-gray-50/50'
-                                    >
-                                        <td className='border border-gray-200 px-3 py-2 font-semibold text-blue-700 text-sm'>
-                                            {j}
-                                        </td>
+                    {futureJornadas.length === 0 ? (
+                        <div className='text-center text-gray-400 py-10 bg-gray-50 rounded-xl border border-dashed border-gray-300'>
+                            <p className='text-sm'>No hay jornadas futuras pendientes</p>
+                        </div>
+                    ) : (
+                        /* Results table */
+                        <div className='overflow-x-auto rounded-xl shadow border border-gray-200'>
+                            <table className='text-sm border-collapse min-w-full'>
+                                <thead>
+                                    <tr>
+                                        <th className='border border-gray-300 px-3 py-2 bg-gray-800 text-white text-left min-w-12.5 text-xs'>
+                                            J
+                                        </th>
                                         {selected.map((team) => {
-                                            const match =
-                                                jornadaMatchMap[j][team];
-                                            if (!match) {
-                                                return (
-                                                    <td
-                                                        key={team}
-                                                        className='border border-gray-200 p-2 text-gray-400 text-xs italic text-center'
-                                                    >
-                                                        —
-                                                    </td>
-                                                );
-                                            }
+                                            const color = getTeamColor(
+                                                team,
+                                                selected,
+                                            );
                                             return (
-                                                <MatchCell
+                                                <th
                                                     key={team}
-                                                    match={match}
-                                                    teamName={team}
-                                                />
+                                                    className={`border border-gray-300 px-3 py-2 text-left min-w-37.5 ${
+                                                        color
+                                                            ? color.header
+                                                            : "bg-blue-900 text-white"
+                                                    }`}
+                                                >
+                                                    <div className='flex items-center gap-1.5'>
+                                                        <TeamLogo
+                                                            teamName={team}
+                                                            size='xs'
+                                                        />
+                                                        <span className='text-xs font-semibold'>
+                                                            {team}
+                                                        </span>
+                                                    </div>
+                                                </th>
                                             );
                                         })}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </thead>
+                                <tbody>
+                                    {futureJornadas.map((j) => (
+                                        <tr
+                                            key={j}
+                                            className='odd:bg-white even:bg-gray-50/50'
+                                        >
+                                            <td className='border border-gray-200 px-3 py-2 font-semibold text-blue-700 text-sm'>
+                                                {j}
+                                            </td>
+                                            {selected.map((team) => {
+                                                const match =
+                                                    jornadaMatchMap[j][team];
+                                                if (!match) {
+                                                    return (
+                                                        <td
+                                                            key={team}
+                                                            className='border border-gray-200 p-2 text-gray-400 text-xs italic text-center'
+                                                        >
+                                                            —
+                                                        </td>
+                                                    );
+                                                }
+                                                return (
+                                                    <MatchCell
+                                                        key={team}
+                                                        match={match}
+                                                        teamName={team}
+                                                    />
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </>
             )}
         </div>
