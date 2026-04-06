@@ -243,7 +243,7 @@ async function seed() {
           seasonId,
           teamId,
           row.position,
-          row.played,
+          row.played || 0,
           row.wins,
           row.draws,
           row.losses,

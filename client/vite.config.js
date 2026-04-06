@@ -13,7 +13,7 @@ export default defineConfig({
         proxy: {
             // Proxy all API calls to the backend service
             "/api": {
-                target: "http://localhost:3001",
+                target: "http://backend:3001",
                 changeOrigin: true,
             },
         },
