@@ -28,6 +28,14 @@ const apiLimiter = rateLimit({
 });
 app.use('/api', apiLimiter);
 
+// Rate limiter for static asset/SPA serving
+const staticLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 600,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -59,7 +67,7 @@ if (process.env.NODE_ENV === 'production') {
   const distPath = join(__dirname, '../../client/dist');
   app.use(express.static(distPath));
   // SPA fallback: any non-API route serves index.html
-  app.get('*', (req, res) => {
+  app.get('*', staticLimiter, (req, res) => {
     res.sendFile(join(distPath, 'index.html'));
   });
 }
