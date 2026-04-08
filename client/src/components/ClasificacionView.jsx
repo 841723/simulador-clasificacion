@@ -26,7 +26,7 @@ function getZoneBorder(position) {
 }
 
 // ── Form dots ──────────────────────────────────────────────────────────────────
-function FormDot({ result, isLocked, jornada, opponent, isHome, homeGoals, awayGoals }) {
+function FormDot({ result, isLocked, jornada, opponent, isHome, homeGoals, awayGoals, team }) {
   const base = 'w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-default';
   const colors = { W: 'bg-emerald-500', D: 'bg-gray-400', L: 'bg-rose-500' };
   const labels = { W: 'V', D: 'E', L: 'D' };
@@ -34,9 +34,13 @@ function FormDot({ result, isLocked, jornada, opponent, isHome, homeGoals, awayG
   // Build tooltip: "J12 · Sporting (V) · 2-1"
   const parts = [];
   if (jornada != null) parts.push(`J${jornada}`);
-  if (opponent) parts.push(`${opponent} (${isHome ? 'L' : 'V'})`);
-  if (homeGoals != null && awayGoals != null) parts.push(`${homeGoals}-${awayGoals}`);
-  const tooltip = parts.length ? parts.join(' · ') : (result === 'W' ? 'Victoria' : result === 'D' ? 'Empate' : 'Derrota');
+  parts.push('·');
+  parts.push(isHome ? team : opponent);
+  parts.push(homeGoals)
+  parts.push('–');
+  parts.push(awayGoals);
+  parts.push(isHome ? opponent : team);
+  const tooltip = parts.join(' ');
 
   return (
     <span
@@ -149,7 +153,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
                     {form.length === 0
                       ? <span className="text-gray-300">—</span>
                       : form.map((f, idx) => (
-                          <FormDot key={idx} result={f.result} isLocked={f.isLocked} jornada={f.jornada} opponent={f.opponent} isHome={f.isHome} homeGoals={f.homeGoals} awayGoals={f.awayGoals} />
+                          <FormDot key={idx} result={f.result} isLocked={f.isLocked} jornada={f.jornada} opponent={f.opponent} isHome={f.isHome} homeGoals={f.homeGoals} awayGoals={f.awayGoals} team={row.team.name} />
                         ))
                     }
                   </div>
