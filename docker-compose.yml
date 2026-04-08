@@ -1,0 +1,80 @@
+# ============================================================
+# Development Docker Compose
+#
+# Services:
+#   db       – PostgreSQL (shared data volume with prod)
+#   backend  – Express API with nodemon hot-reload
+#   frontend – Vite dev server with HMR
+#
+# Usage:
+#   cp .env.example .env          # fill in secrets
+#   docker compose up --build
+#
+# NOTE: Only one postgres instance (dev OR prod) should be
+#       running at a time since they share the same data volume.
+# ============================================================
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER:     ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - simulador_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # command: sh -c "npm run migrate && npm run seed && npm run dev"
+    command: sh -c "npm run dev"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: "postgresql://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env}"
+    volumes:
+      # Mount source for hot-reload
+      - ./backend/src:/app/src:ro
+      # Mount public JSON data so seed script can find it
+      - ./public:/app/../public:ro
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ./backend/src
+          target: /app/src
+
+  frontend:
+    image: node:22-alpine
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    environment:
+      VITE_API_URL: "http://backend:3001"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  simulador_pgdata:
+    name: simulador_pgdata

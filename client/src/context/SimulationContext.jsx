@@ -6,40 +6,45 @@ import {
   calculateProjectedStandings,
   isMatchLocked,
 } from '../utils/standings';
+import { computeCurrentJornada } from '../utils/navigation';
 
 const SimulationContext = createContext(null);
 
-const JORNADAS = [34, 35, 36, 37, 38, 39, 40, 41, 42];
-const STANDINGS_URL = '/standings/2026-04-04-16-55.json';
-
-function buildJornadaUrls() {
-  return JORNADAS.map((j) => `/jornadas/${j}.json`);
-}
+// Default season id – can be overridden via VITE_SEASON_ID env var
+const DEFAULT_SEASON_ID = import.meta.env.VITE_SEASON_ID || 1;
 
 const initialState = {
   loading: true,
   error: null,
-  baseStandings: [],          // raw rows from standings JSON
-  allMatches: [],             // flat list of all matches across jornadas
-  results: {},                // matchId → "1" | "X" | "2"
-  originalResults: {},        // initial computed results (for reset)
-  scores: {},                 // matchId → { home: number, away: number }
-  originalScores: {},         // initial computed scores (for reset)
-  lockedMatchIds: {},         // matchId → resultado string (e.g. "1-3")
-  pronosticos: {},            // matchId → { local, empate, visitante }
-  savedSimulations: {},       // name → { results, scores }
-  activeSimulationName: null, // name of currently loaded/saved simulation
+  leagueSlug: null,
+  seasonYear: null,
+  leagueExternalId: null,
+  seasonExternalId: null,
+  baseStandings: [],
+  allMatches: [],
+  results: {},
+  originalResults: {},
+  scores: {},
+  originalScores: {},
+  lockedMatchIds: {},
+  pronosticos: {},
+  savedSimulations: {},
+  activeSimulationName: null,
+  activeSimulationUuid: null,
   selectedTeams: [],
-  currentJornada: 34,
-  activeView: 'jornada',      // 'jornada' | 'teams'
+  currentJornada: null,
+  activeView: 'jornada',
 };
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'LOADING':
+      return { ...state, loading: true, error: null };
     case 'LOAD_DATA': {
-      const { baseStandings, allMatches, lockedMatchIds, pronosticos } = action.payload;
+      const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear } = action.payload;
       const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
       const scores = buildInitialScores(allMatches, results, lockedMatchIds);
+      const jornadas = [...new Set(allMatches.map((m) => m.jornada))].sort((a, b) => a - b);
       return {
         ...state,
         loading: false,
@@ -51,6 +56,11 @@ function reducer(state, action) {
         originalScores: { ...scores },
         lockedMatchIds,
         pronosticos,
+        leagueSlug: leagueSlug ?? state.leagueSlug,
+        seasonYear: seasonYear ?? state.seasonYear,
+        leagueExternalId: leagueExternalId ?? state.leagueExternalId,
+        seasonExternalId: seasonExternalId ?? state.seasonExternalId,
+        currentJornada: computeCurrentJornada(allMatches, jornadas[jornadas.length - 1] ?? 42),
       };
     }
     case 'LOAD_ERROR':
@@ -79,40 +89,28 @@ function reducer(state, action) {
     }
 
     case 'SAVE_SIMULATION': {
-      const { name } = action.payload;
-      const updated = {
-        ...state.savedSimulations,
-        [name]: { results: { ...state.results }, scores: { ...state.scores } },
-      };
-      try {
-        localStorage.setItem('savedSimulations', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Error saving simulation:', e);
-      }
-      return { ...state, savedSimulations: updated, activeSimulationName: name };
+      const { name, uuid } = action.payload;
+      const entry = { uuid, name, results: { ...state.results }, scores: { ...state.scores } };
+      const updated = { ...state.savedSimulations, [uuid]: entry };
+      return { ...state, savedSimulations: updated, activeSimulationName: name, activeSimulationUuid: uuid };
     }
     case 'LOAD_SIMULATION': {
-      const { name } = action.payload;
-      const sim = state.savedSimulations[name];
+      const { uuid } = action.payload;
+      const sim = state.savedSimulations[uuid];
       if (!sim) return state;
       const results = { ...sim.results };
       const scores = sim.scores
         ? { ...sim.scores }
         : buildInitialScores(state.allMatches, results, state.lockedMatchIds);
-      return { ...state, results, scores, activeSimulationName: name };
+      return { ...state, results, scores, activeSimulationName: sim.name, activeSimulationUuid: uuid };
     }
     case 'DELETE_SIMULATION': {
-      const { name } = action.payload;
+      const { uuid } = action.payload;
       const updated = { ...state.savedSimulations };
-      delete updated[name];
-      try {
-        localStorage.setItem('savedSimulations', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Error deleting simulation:', e);
-      }
-      const activeSimulationName =
-        state.activeSimulationName === name ? null : state.activeSimulationName;
-      return { ...state, savedSimulations: updated, activeSimulationName };
+      delete updated[uuid];
+      const activeSimulationName = state.activeSimulationUuid === uuid ? null : state.activeSimulationName;
+      const activeSimulationUuid = state.activeSimulationUuid === uuid ? null : state.activeSimulationUuid;
+      return { ...state, savedSimulations: updated, activeSimulationName, activeSimulationUuid };
     }
     case 'RESET_SIMULATION':
       return {
@@ -120,6 +118,7 @@ function reducer(state, action) {
         results: { ...state.originalResults },
         scores: { ...state.originalScores },
         activeSimulationName: null,
+        activeSimulationUuid: null,
       };
 
     case 'RESET_TEAM': {
@@ -167,96 +166,153 @@ function reducer(state, action) {
 
 export function SimulationProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [teamSlugMap, setTeamSlugMap] = React.useState({});
   const [teamImages, setTeamImages] = React.useState({});
+  const [teamSlugMap, setTeamSlugMap] = React.useState({});
 
-  // Load saved simulations from localStorage on mount
+  // ── All seasons (loaded once on mount) ────────────────────────────────
+  const [allSeasons, setAllSeasons] = React.useState([]);
+  const [seasonsLoaded, setSeasonsLoaded] = React.useState(false);
+
+  // ── selectedSeasonId is driven by the URL (via UrlSeasonSync in App.jsx) ──
+  // Starts as null; UrlSeasonSync will set it once allSeasons is loaded.
+  const [selectedSeasonId, setSelectedSeasonIdRaw] = React.useState(
+    DEFAULT_SEASON_ID ? Number(DEFAULT_SEASON_ID) : null,
+  );
+
+  // ── Load allSeasons once on mount ─────────────────────────────────────
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('savedSimulations');
-      if (raw) {
-        dispatch({ type: 'LOAD_SAVED_SIMS', payload: JSON.parse(raw) });
+    async function loadSeasons() {
+      try {
+        const res = await fetch('/api/seasons');
+        if (!res.ok) return;
+        const data = await res.json();
+        setAllSeasons(data);
+      } catch {
+        // silently ignore
+      } finally {
+        setSeasonsLoaded(true);
       }
-    } catch (e) {      
-      console.error('Error loading saved simulations:', e);
     }
+    loadSeasons();
   }, []);
 
-  // Fetch all data on mount
+  // Helper: find seasonId from leagueSlug + year URL param (e.g. "25-26")
+  function findSeasonId(leagueSlug, yearParam) {
+    const yearNormalized = yearParam ? yearParam.replace(/-/g, '/') : null;
+    const match = allSeasons.find(
+      (s) =>
+        s.leagueSlug === leagueSlug &&
+        (yearNormalized ? s.year === yearNormalized : true),
+    );
+    return match?.id ?? null;
+  }
+
+  // Public setter: only triggers reload if the ID actually changed
+  const setSelectedSeasonId = React.useCallback((id) => {
+    setSelectedSeasonIdRaw((prev) => (prev === id ? prev : id));
+  }, []);
+
+  // ── Load saved simulations when season changes ────────────────────────
   useEffect(() => {
+    if (!selectedSeasonId) return;
+    async function loadSims() {
+      try {
+        const res = await fetch(`/api/simulations?seasonId=${selectedSeasonId}`);
+        if (!res.ok) return;
+        const sims = await res.json();
+        const simMap = {};
+        for (const s of sims) simMap[s.uuid] = s;
+        dispatch({ type: 'LOAD_SAVED_SIMS', payload: simMap });
+      } catch {
+        // silently ignore
+      }
+    }
+    loadSims();
+  }, [selectedSeasonId]);
+
+  // ── Fetch season data when selectedSeasonId changes ───────────────────
+  useEffect(() => {
+    if (!selectedSeasonId) return;
+    dispatch({ type: 'LOADING' });
     async function fetchAll() {
       try {
-        const [standingsRes, resultadosRes, teamsRes, ...jornadaRes] = await Promise.all([
-          fetch(STANDINGS_URL),
-          fetch('/resultados.json'),
-          fetch('/teams.json'),
-          ...buildJornadaUrls().map((url) => fetch(url)),
+        const [standingsRes, matchesRes, teamsRes] = await Promise.all([
+          fetch(`/api/seasons/${selectedSeasonId}/standings`),
+          fetch(`/api/seasons/${selectedSeasonId}/matches`),
+          fetch('/api/teams'),
         ]);
 
-        const standingsData = await standingsRes.json();
-        const baseStandings = standingsData.standings[0].rows;
+        if (!standingsRes.ok) throw new Error(`Standings API error: ${standingsRes.status}`);
+        if (!matchesRes.ok) throw new Error(`Matches API error: ${matchesRes.status}`);
 
-        const resultadosData = await resultadosRes.json();
-        const teamsData = await teamsRes.json();
+        const baseStandings = await standingsRes.json();
+        const matchesData = await matchesRes.json();
+        const teamsData = teamsRes.ok ? await teamsRes.json() : [];
+
+        // Use already-loaded allSeasons to find current season info
+        const currentSeasonInfo = allSeasons.find((s) => String(s.id) === String(selectedSeasonId));
+        const leagueExternalId = currentSeasonInfo?.leagueExternalId ?? null;
+        const seasonExternalId = currentSeasonInfo?.seasonExternalId ?? null;
+        const leagueSlug = currentSeasonInfo?.leagueSlug ?? null;
+        const seasonYear = currentSeasonInfo?.year ? currentSeasonInfo.year.replace('/', '-') : null;
+
+        // Build team images map
+        const images = {};
+        const slugMap = {};
+        for (const t of teamsData) {
+          if (t.imageUrl) images[t.slug] = t.imageUrl;
+          if (t.name) slugMap[t.name] = t.slug;
+        }
+        for (const m of matchesData) {
+          if (m.homeTeamImageUrl) images[m.homeTeamSlug] = m.homeTeamImageUrl;
+          if (m.awayTeamImageUrl) images[m.awayTeamSlug] = m.awayTeamImageUrl;
+          slugMap[m.homeTeam] = m.homeTeamSlug;
+          slugMap[m.awayTeam] = m.awayTeamSlug;
+        }
+        setTeamImages(images);
+        setTeamSlugMap(slugMap);
 
         // Build lockedMatchIds and pronosticos
         const lockedMatchIds = {};
         const pronosticos = {};
-        for (const jornada of Object.values(resultadosData)) {
-          for (const match of Object.values(jornada)) {
-            if (match.resultado !== '') {
-              lockedMatchIds[match.id] = match.resultado;
-            }
-            if (match.pronostico) {
-              pronosticos[match.id] = match.pronostico;
-            }
+        for (const m of matchesData) {
+          if (m.isLocked && m.lockedResult) {
+            lockedMatchIds[m.id] = m.lockedResult;
+          }
+          if (m.pronostico) {
+            pronosticos[m.id] = m.pronostico;
           }
         }
 
-        // Build team images map: slug → image URL
-        const images = {};
-        for (const [slug, data] of Object.entries(teamsData)) {
-          images[slug] = data.imagen;
-        }
-        setTeamImages(images);
+        const allMatches = matchesData.map((m) => ({
+          id: m.id,
+          jornada: m.jornada,
+          homeTeam: m.homeTeam,
+          homeTeamSlug: m.homeTeamSlug,
+          awayTeam: m.awayTeam,
+          awayTeamSlug: m.awayTeamSlug,
+          homeScore: m.homeScore,
+          awayScore: m.awayScore,
+          status: m.status,
+          winnerCode: m.winnerCode,
+          startTimestamp: m.startTimestamp,
+          probIsFinal: m.probIsFinal ?? false,
+        }));
 
-        const jornadaDataArr = await Promise.all(jornadaRes.map((r) => r.json()));
-
-        // Build slug map while parsing match data
-        const slugMap = {};
-        const allMatches = jornadaDataArr.flatMap((data) =>
-          data.events.map((e) => {
-            slugMap[e.homeTeam.name] = e.homeTeam.slug;
-            slugMap[e.awayTeam.name] = e.awayTeam.slug;
-            return {
-              id: e.id,
-              jornada: e.roundInfo.round,
-              homeTeam: e.homeTeam.name,
-              homeTeamSlug: e.homeTeam.slug,
-              awayTeam: e.awayTeam.name,
-              awayTeamSlug: e.awayTeam.slug,
-              homeScore: e.homeScore?.current ?? null,
-              awayScore: e.awayScore?.current ?? null,
-              status: e.status.description,
-              winnerCode: e.winnerCode ?? null,
-              startTimestamp: e.startTimestamp,
-            };
-          })
-        );
-
-        setTeamSlugMap(slugMap);
         dispatch({
           type: 'LOAD_DATA',
-          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos },
+          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear },
         });
       } catch (err) {
         dispatch({ type: 'LOAD_ERROR', payload: err.message });
       }
     }
     fetchAll();
-  }, []);
+  // We intentionally don't include allSeasons in deps – it's stable after first load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSeasonId]);
 
-  // Compute projected standings whenever results or lockedMatchIds change
+  // ── Compute projected standings ────────────────────────────────────────
   const projectedStandings = useMemo(() => {
     if (state.baseStandings.length === 0) return [];
     return calculateProjectedStandings(
@@ -268,6 +324,57 @@ export function SimulationProvider({ children }) {
     );
   }, [state.baseStandings, state.allMatches, state.results, state.lockedMatchIds, state.scores]);
 
+  // ── Derive JORNADAS list dynamically ──────────────────────────────────
+  const JORNADAS = useMemo(
+    () => [...new Set(state.allMatches.map((m) => m.jornada))].sort((a, b) => a - b),
+    [state.allMatches],
+  );
+
+  // ── Current season's zone config ──────────────────────────────────────
+  const currentZones = useMemo(() => {
+    const season = allSeasons.find((s) => String(s.id) === String(selectedSeasonId));
+    return season?.zones ?? [];
+  }, [allSeasons, selectedSeasonId]);
+
+  // ── Simulation persistence helpers ────────────────────────────────────
+  async function saveSimulationToAPI(name) {
+    const body = {
+      name,
+      seasonId: selectedSeasonId,
+      results: state.results,
+      scores: state.scores,
+      uuid: state.activeSimulationUuid || undefined,
+    };
+    const res = await fetch('/api/simulations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error('Failed to save simulation');
+    const { uuid } = await res.json();
+    dispatch({ type: 'SAVE_SIMULATION', payload: { name, uuid } });
+    return uuid;
+  }
+
+  async function loadSimulationFromAPI(uuid) {
+    const cached = state.savedSimulations[uuid];
+    if (cached?.results) {
+      dispatch({ type: 'LOAD_SIMULATION', payload: { uuid } });
+      return;
+    }
+    const res = await fetch(`/api/simulations/${uuid}`);
+    if (!res.ok) throw new Error('Failed to load simulation');
+    const sim = await res.json();
+    const updated = { ...state.savedSimulations, [uuid]: sim };
+    dispatch({ type: 'LOAD_SAVED_SIMS', payload: updated });
+    dispatch({ type: 'LOAD_SIMULATION', payload: { uuid } });
+  }
+
+  async function deleteSimulationFromAPI(uuid) {
+    await fetch(`/api/simulations/${uuid}`, { method: 'DELETE' });
+    dispatch({ type: 'DELETE_SIMULATION', payload: { uuid } });
+  }
+
   const value = {
     state,
     dispatch,
@@ -275,6 +382,20 @@ export function SimulationProvider({ children }) {
     JORNADAS,
     teamSlugMap,
     teamImages,
+    saveSimulationToAPI,
+    loadSimulationFromAPI,
+    deleteSimulationFromAPI,
+    SEASON_ID: selectedSeasonId,
+    allSeasons,
+    seasonsLoaded,
+    selectedSeasonId,
+    setSelectedSeasonId,
+    findSeasonId,
+    currentZones,
+    leagueSlug: state.leagueSlug,
+    seasonYear: state.seasonYear,
+    leagueExternalId: state.leagueExternalId,
+    seasonExternalId: state.seasonExternalId,
   };
   return (
     <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>

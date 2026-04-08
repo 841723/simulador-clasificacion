@@ -98,9 +98,9 @@ export function isModified(matchId, state) {
 }
 
 /**
- * Calculate projected standings from base standings + simulated match results.
- * Base standings already incorporate locked/played matches.
- * We apply only unlocked (pending) match results on top.
+ * Calculate projected standings from base standings + all match results.
+ * Base standings represent the start of season (all zeros).
+ * Both locked (actual) and unlocked (simulated) match results are applied.
  */
 export function calculateProjectedStandings(baseStandingsRows, allMatches, results, lockedMatchIds = {}, scores = {}) {
   // Deep clone base standings into a mutable map
@@ -120,9 +120,6 @@ export function calculateProjectedStandings(baseStandingsRows, allMatches, resul
   }
 
   for (const match of allMatches) {
-    // Skip locked matches – already accounted for in baseStandings
-    if (isMatchLocked(match.id, lockedMatchIds)) continue;
-
     const result = results[match.id];
     if (!result) continue;
 

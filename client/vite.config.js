@@ -11,10 +11,11 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            "/jornadas": "http://localhost:3000",
-            "/standings": "http://localhost:3000",
-            "/teams.json": "http://localhost:3000",
-            "/resultados.json": "http://localhost:3000",
+            // Proxy all API calls to the backend service
+            "/api": {
+                target: "http://backend:3001",
+                changeOrigin: true,
+            },
         },
         watch: {
             usePolling: true

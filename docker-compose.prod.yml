@@ -1,0 +1,67 @@
+# ============================================================
+# Production Docker Compose
+#
+# Services:
+#   db       – PostgreSQL (shared data volume with dev)
+#   backend  – Express API (no hot-reload)
+#   frontend – nginx serving the built React app
+#
+# Usage:
+#   cp .env.example .env          # fill in secrets
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# NOTE: Only one postgres instance (dev OR prod) should be
+#       running at a time since they share the same data volume.
+# ============================================================
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER:     ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - simulador_pgdata:/var/lib/postgresql/data
+    # In production the DB port is not exposed to the host
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    # Run migrations + seed on every startup (idempotent)
+    command: sh -c "node src/db/migrate.js && node src/scripts/seed.js && node src/index.js"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: "postgresql://${POSTGRES_USER:?Set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:?Set POSTGRES_DB in .env}"
+    volumes:
+      # Mount public JSON data so seed script can find it at runtime
+      - ./public:/app/../public:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: /api
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  simulador_pgdata:
+    name: simulador_pgdata

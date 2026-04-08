@@ -1,4 +1,130 @@
-# Simulador de Clasificación - LaLiga 2
+# Simulador de Clasificación
+
+Un simulador interactivo de la clasificación de **LaLiga 2** (temporada 2025/26) con simulación Monte Carlo, construido con React + Vite (frontend), Express + PostgreSQL (backend) y un scraper Python/Playwright.
+
+## Características
+
+- 🗓 **Vista por Jornada** – Simula los resultados de cada jornada editando marcadores o seleccionando 1/X/2.
+- 📊 **Clasificación dinámica** – La clasificación se recalcula en tiempo real con cada cambio.
+- 🎲 **Simulación Monte Carlo** – Calcula probabilidades de ascenso, playoff y descenso basadas en cuotas de apuestas normalizadas o probabilidades iguales (1/3 cada una).
+- 👥 **Vista por Equipo** – Tabla comparativa de hasta 5 equipos con sus partidos futuros pendientes.
+- 💾 **Guardar simulaciones** – Guarda y carga escenarios con nombre.
+- 🔗 **URLs canónicas** – Cada vista tiene su propia URL compartible con liga/temporada/jornada.
+
+## Arquitectura
+
+```
+client/        React + Vite + Tailwind CSS
+backend/       Express + PostgreSQL (API REST)
+sofascore_scrapper/  Python + Playwright (scraper de datos)
+```
+
+### Base de datos
+
+PostgreSQL con las tablas: `leagues`, `seasons`, `teams`, `season_teams`, `matches`, `base_standings`, `simulations`, `simulation_results`, `probability_sources`, `match_probabilities`.
+
+## Inicio rápido con Docker Compose
+
+```bash
+# Clona el repositorio
+git clone https://github.com/tu-usuario/simulador-clasificacion.git
+cd simulador-clasificacion
+
+# Arranca todos los servicios (PostgreSQL + backend + cliente)
+docker compose up --build
+
+# La app estará disponible en http://localhost:3001
+```
+
+## Configuración manual (sin Docker)
+
+### Requisitos
+
+- Node.js 20+
+- PostgreSQL 15+
+- Python 3.11+
+
+### Backend
+
+```bash
+cd backend
+cp .env.example .env   # configura DB_HOST, DB_USER, etc.
+npm install
+node src/db/migrate.js  # aplica el schema
+node src/scripts/seed.js  # carga datos iniciales
+npm start
+```
+
+### Cliente
+
+```bash
+cd client
+npm install
+npm run dev    # servidor de desarrollo en http://localhost:5173
+```
+
+### Build de producción
+
+```bash
+cd client && npm run build
+# Los ficheros estáticos se generan en client/dist/
+# El backend sirve client/dist/ cuando NODE_ENV=production
+```
+
+## Scraper
+
+```bash
+cd sofascore_scrapper
+pip install playwright psycopg
+playwright install chromium
+
+# First run: seed teams from standings API, then scrape all jornadas
+python sofascore.py --init-teams
+
+# Subsequent runs: incremental (auto-detects first incomplete jornada)
+python sofascore.py
+
+# With explicit options
+python sofascore.py --from-jornada 30 --to-jornada 42
+```
+
+Ver [docs/scraper.md](docs/scraper.md) para más detalles.
+
+## Variables de entorno
+
+| Variable          | Descripción                            | Default        |
+|-------------------|----------------------------------------|----------------|
+| `DB_HOST`         | Host de PostgreSQL                     | `localhost`    |
+| `DB_PORT`         | Puerto de PostgreSQL                   | `5432`         |
+| `DB_NAME`         | Nombre de la base de datos             | `simulador_db` |
+| `DB_USER`         | Usuario de PostgreSQL                  | `simulador`    |
+| `DB_PASSWORD`     | Contraseña de PostgreSQL               | `simulador`    |
+| `PORT`            | Puerto del servidor Express            | `3001`         |
+| `NODE_ENV`        | Entorno (`production` sirve el SPA)    | —              |
+| `VITE_SEASON_ID`  | ID interno de temporada a usar         | `1`            |
+
+## Estructura del proyecto
+
+```
+client/
+  src/
+    App.jsx                      # Rutas principales
+    components/                  # Componentes React
+    context/SimulationContext.jsx  # Estado global
+    utils/                       # Utilidades (standings, monteCarlo, navigation)
+backend/
+  src/
+    db/schema.sql                # Schema de la BD
+    routes/                      # Rutas Express
+    scripts/seed.js              # Seed inicial
+sofascore_scrapper/
+  sofascore.py                   # Scraper incremental
+docs/
+  backend.md                     # Documentación del backend
+  frontend.md                    # Documentación del frontend
+  scraper.md                     # Documentación del scraper
+```
+ - LaLiga 2
 
 Aplicación web para simular la clasificación final de LaLiga 2 desde la **jornada 34 hasta la 42**, permitiendo modificar los resultados de los partidos pendientes y ver cómo quedaría la tabla en tiempo real.
 
