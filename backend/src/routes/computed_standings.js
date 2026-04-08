@@ -34,8 +34,8 @@ router.get('/:leagueSlug/:seasonYear/:jornada', async (req, res, next) => {
     const { leagueSlug, seasonYear } = req.params;
     const jornada = parseInt(req.params.jornada, 10);
 
-    if (isNaN(jornada) || jornada < 0) {
-      return res.status(400).json({ error: 'Invalid jornada parameter' });
+    if (isNaN(jornada) || jornada < 1) {
+      return res.status(400).json({ error: 'Invalid jornada parameter: must be a positive integer' });
     }
 
     // URL year "24-25" → DB year "24/25"
