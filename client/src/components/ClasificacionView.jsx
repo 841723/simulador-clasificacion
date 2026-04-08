@@ -26,13 +26,21 @@ function getZoneBorder(position) {
 }
 
 // ── Form dots ──────────────────────────────────────────────────────────────────
-function FormDot({ result, isLocked }) {
-  const base = 'w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold';
+function FormDot({ result, isLocked, jornada, opponent, isHome, homeGoals, awayGoals }) {
+  const base = 'w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold cursor-default';
   const colors = { W: 'bg-emerald-500', D: 'bg-gray-400', L: 'bg-rose-500' };
   const labels = { W: 'V', D: 'E', L: 'D' };
+
+  // Build tooltip: "J12 · Sporting (V) · 2-1"
+  const parts = [];
+  if (jornada != null) parts.push(`J${jornada}`);
+  if (opponent) parts.push(`${opponent} (${isHome ? 'L' : 'V'})`);
+  if (homeGoals != null && awayGoals != null) parts.push(`${homeGoals}-${awayGoals}`);
+  const tooltip = parts.length ? parts.join(' · ') : (result === 'W' ? 'Victoria' : result === 'D' ? 'Empate' : 'Derrota');
+
   return (
     <span
-      title={result === 'W' ? 'Victoria' : result === 'D' ? 'Empate' : 'Derrota'}
+      title={tooltip}
       className={`${base} ${colors[result] || 'bg-gray-200'} ${!isLocked ? 'opacity-60' : ''}`}
     >
       {labels[result] || '?'}
@@ -141,7 +149,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
                     {form.length === 0
                       ? <span className="text-gray-300">—</span>
                       : form.map((f, idx) => (
-                          <FormDot key={idx} result={f.result} isLocked={f.isLocked} />
+                          <FormDot key={idx} result={f.result} isLocked={f.isLocked} jornada={f.jornada} opponent={f.opponent} isHome={f.isHome} homeGoals={f.homeGoals} awayGoals={f.awayGoals} />
                         ))
                     }
                   </div>
@@ -413,7 +421,7 @@ function JornadaSelector({ jornadas, effectiveEvalJornada, onChange }) {
 
 // ── Main ClasificacionView ─────────────────────────────────────────────────────
 export default function ClasificacionView() {
-  const { state, JORNADAS, leagueSlug, seasonYear, selectedProbSource, setProbSource, probSources } = useSimulation();
+  const { state, JORNADAS, leagueSlug, seasonYear } = useSimulation();
   const [selectedTeam, setSelectedTeam] = useState(null);
   const params = useParams();
   const navigate = useNavigate();
@@ -487,16 +495,10 @@ export default function ClasificacionView() {
     );
   }, [state.baseStandings, matchesUpToX, lockedUpToX, lockedScoresUpToX]);
 
-  // Pronosticos for future matches (jornada > X)
+  // Pronosticos for future matches (jornada > X) – only real odds (probIsFinal)
   const effectivePronosticos = useMemo(() => {
-    if (selectedProbSource === 'equal') {
-      const equalProno = { local: 1 / 3, empate: 1 / 3, visitante: 1 / 3 };
-      const result = {};
-      for (const m of matchesFromX1) result[m.id] = equalProno;
-      return result;
-    }
     return state.pronosticos;
-  }, [selectedProbSource, matchesFromX1, state.pronosticos]);
+  }, [state.pronosticos]);
 
   // Zone probabilities via Monte Carlo for jornada X+1 onwards
   const zoneProbabilities = useMemo(() => {
@@ -563,25 +565,6 @@ export default function ClasificacionView() {
               Actual
             </button>
           )}
-        </div>
-
-        {/* Probability source selector */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide shrink-0">
-            Probabilidades:
-          </span>
-          <select
-            value={selectedProbSource}
-            onChange={(e) => setProbSource(e.target.value)}
-            className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
-          >
-            <option value="equal">Igual (1/3 cada una)</option>
-            {probSources.map((s) => (
-              <option key={s.slug} value={s.slug}>
-                {s.name}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 

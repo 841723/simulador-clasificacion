@@ -326,11 +326,11 @@ def upsert_match(conn, season_id, event, home_team_id, away_team_id, jornada):
 def upsert_odds(conn, match_id, odds_source_id, prob_home, prob_draw, prob_away):
     """Upsert probabilities in both matches table and match_probabilities table."""
     with conn.cursor() as cur:
-        # Update legacy columns on matches table for backwards compat
+        # Update columns on matches table (prob_is_final=true → real odds)
         cur.execute(
             """
             UPDATE matches
-            SET prob_home = %s, prob_draw = %s, prob_away = %s
+            SET prob_home = %s, prob_draw = %s, prob_away = %s, prob_is_final = TRUE
             WHERE id = %s
             """,
             (prob_home, prob_draw, prob_away, match_id),

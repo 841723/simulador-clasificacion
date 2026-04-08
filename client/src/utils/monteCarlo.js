@@ -1,11 +1,41 @@
 import { calculateProjectedStandings } from './standings.js';
 
 /**
+ * Build a position lookup map from a standings array: teamName → position (1-based).
+ */
+function buildPositionMap(standings) {
+  const map = {};
+  for (const row of standings) {
+    map[row.team.name] = row.position;
+  }
+  return map;
+}
+
+/**
+ * Given the base standings, compute standings-based probability for a match.
+ * Higher-ranked team (lower position number) is favoured.
+ * Returns { local, empate, visitante }.
+ */
+function positionBasedProb(homeTeam, awayTeam, positionMap) {
+  const homePos = positionMap[homeTeam] ?? 11;
+  const awayPos = positionMap[awayTeam] ?? 11;
+  if (homePos < awayPos) {
+    // Home team is ranked higher → home favoured
+    return { local: 0.50, empate: 0.25, visitante: 0.25 };
+  } else if (awayPos < homePos) {
+    // Away team is ranked higher → away favoured
+    return { local: 0.25, empate: 0.25, visitante: 0.50 };
+  }
+  // Equal position → balanced with slight home advantage
+  return { local: 0.38, empate: 0.26, visitante: 0.36 };
+}
+
+/**
  * Run N Monte Carlo simulations to estimate the probability of each team
  * finishing in each classification zone.
  *
- * @param {Array}  allMatches       - all match objects
- * @param {Array}  baseStandings    - base standings rows
+ * @param {Array}  allMatches       - all match objects (may include probIsFinal flag)
+ * @param {Array}  baseStandings    - base standings rows (used as starting point AND for position fallback)
  * @param {Object} lockedMatchIds   - matchId → lockedResult string
  * @param {Object} pronosticos      - matchId → { local, empate, visitante }
  * @param {Object} currentScores    - matchId → { home, away }
@@ -30,6 +60,9 @@ export function runMonteCarloSimulations(
     if (!counts[match.awayTeam]) counts[match.awayTeam] = { ascenso: 0, playoff: 0, mid: 0, descenso: 0 };
   }
 
+  // Build position map from base standings for fallback probability computation
+  const positionMap = buildPositionMap(baseStandings);
+
   for (let i = 0; i < N; i++) {
     const simResults = {};
     const simScores = {};
@@ -40,32 +73,19 @@ export function runMonteCarloSimulations(
         simResults[match.id] = currentResults[match.id];
         simScores[match.id] = currentScores[match.id] || { home: 0, away: 0 };
       } else {
-        const p = pronosticos[match.id];
+        // Use real odds when available (probIsFinal), otherwise use standings-based probs
+        const p = pronosticos[match.id] ?? positionBasedProb(match.homeTeam, match.awayTeam, positionMap);
         const rand = Math.random();
 
-        if (p) {
-          if (rand < p.local) {
-            simResults[match.id] = '1';
-            simScores[match.id] = { home: 1, away: 0 };
-          } else if (rand < p.local + p.empate) {
-            simResults[match.id] = 'X';
-            simScores[match.id] = { home: 0, away: 0 };
-          } else {
-            simResults[match.id] = '2';
-            simScores[match.id] = { home: 0, away: 1 };
-          }
+        if (rand < p.local) {
+          simResults[match.id] = '1';
+          simScores[match.id] = { home: 1, away: 0 };
+        } else if (rand < p.local + p.empate) {
+          simResults[match.id] = 'X';
+          simScores[match.id] = { home: 0, away: 0 };
         } else {
-          // No pronostico: home-favoured defaults (40% home, 30% draw, 30% away)
-          if (rand < 0.4) {
-            simResults[match.id] = '1';
-            simScores[match.id] = { home: 1, away: 0 };
-          } else if (rand < 0.7) {
-            simResults[match.id] = 'X';
-            simScores[match.id] = { home: 0, away: 0 };
-          } else {
-            simResults[match.id] = '2';
-            simScores[match.id] = { home: 0, away: 1 };
-          }
+          simResults[match.id] = '2';
+          simScores[match.id] = { home: 0, away: 1 };
         }
       }
     }
@@ -120,12 +140,21 @@ export function getLast5Matches(allMatches, results, lockedMatchIds) {
     const homeWin = result === '1';
     const draw = result === 'X';
 
+    // Score from lockedResult string (e.g. "2-1") or fallback
+    const scoreStr = lockedMatchIds[match.id] || null;
+    const scoreParts = scoreStr ? scoreStr.split('-') : null;
+    const homeGoals = scoreParts ? parseInt(scoreParts[0], 10) : null;
+    const awayGoals = scoreParts ? parseInt(scoreParts[1], 10) : null;
+
     if (!history[match.homeTeam]) history[match.homeTeam] = [];
     history[match.homeTeam].push({
       result: homeWin ? 'W' : draw ? 'D' : 'L',
       isLocked,
       opponent: match.awayTeam,
       isHome: true,
+      jornada: match.jornada,
+      homeGoals,
+      awayGoals,
     });
 
     if (!history[match.awayTeam]) history[match.awayTeam] = [];
@@ -134,6 +163,9 @@ export function getLast5Matches(allMatches, results, lockedMatchIds) {
       isLocked,
       opponent: match.homeTeam,
       isHome: false,
+      jornada: match.jornada,
+      homeGoals,
+      awayGoals,
     });
   }
 

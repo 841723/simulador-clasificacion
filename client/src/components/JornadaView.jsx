@@ -4,8 +4,6 @@ import { useSimulation } from '../context/SimulationContext';
 import { isMatchLocked, isModified, parseResultado } from '../utils/standings';
 import TeamLogo from './TeamLogo';
 
-const EQUAL_PRONO = { local: 1 / 3, empate: 1 / 3, visitante: 1 / 3 };
-
 const RESULT_OPTIONS = [
     { value: "1", label: "1", title: "Local gana" },
     { value: "X", label: "×", title: "Empate" },
@@ -77,14 +75,14 @@ function GoalInput({ value, onChange, disabled }) {
 }
 
 export function ResultSelector({ match }) {
-    const { state, dispatch, selectedProbSource } = useSimulation();
+    const { state, dispatch } = useSimulation();
     const locked = isMatchLocked(match.id, state.lockedMatchIds);
     const current = state.results[match.id];
     const score = state.scores[match.id] || { home: 0, away: 0 };
+    // Only show pronostico pills when the match has real odds (probIsFinal)
     const rawPronostico = state.pronosticos[match.id];
-    const pronostico = selectedProbSource === 'equal' && !locked
-        ? EQUAL_PRONO
-        : rawPronostico;
+    const matchInfo = state.allMatches.find((m) => m.id === match.id);
+    const pronostico = (matchInfo?.probIsFinal && rawPronostico) ? rawPronostico : null;
 
     const handleGoalChange = (side, val) => {
         const newHome = side === 'home' ? val : score.home;

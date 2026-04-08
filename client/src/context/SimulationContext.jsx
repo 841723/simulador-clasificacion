@@ -39,6 +39,8 @@ const initialState = {
 
 function reducer(state, action) {
   switch (action.type) {
+    case 'LOADING':
+      return { ...state, loading: true, error: null };
     case 'LOAD_DATA': {
       const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear } = action.payload;
       const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
@@ -167,29 +169,14 @@ export function SimulationProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [teamImages, setTeamImages] = React.useState({});
   const [teamSlugMap, setTeamSlugMap] = React.useState({});
-  const [probSources, setProbSources] = React.useState([]);
-  const [selectedProbSource, setSelectedProbSource] = React.useState('odds');
-
-  // ── Load probability sources on mount ─────────────────────────────────
-  useEffect(() => {
-    async function loadProbSources() {
-      try {
-        const res = await fetch('/api/probability-sources');
-        if (!res.ok) return;
-        const sources = await res.json();
-        setProbSources(sources);
-      } catch {
-        // silently ignore
-      }
-    }
-    loadProbSources();
-  }, []);
+  const [allSeasons, setAllSeasons] = React.useState([]);   // all available seasons
+  const [selectedSeasonId, setSelectedSeasonId] = React.useState(SEASON_ID);
 
   // ── Load saved simulations from API on mount ────────────────────────────
   useEffect(() => {
     async function loadSims() {
       try {
-        const res = await fetch(`/api/simulations?seasonId=${SEASON_ID}`);
+        const res = await fetch(`/api/simulations?seasonId=${selectedSeasonId}`);
         if (!res.ok) return;
         const sims = await res.json();
         const simMap = {};
@@ -200,15 +187,16 @@ export function SimulationProvider({ children }) {
       }
     }
     loadSims();
-  }, []);
+  }, [selectedSeasonId]);
 
-  // ── Fetch all data from REST API on mount ──────────────────────────────
+  // ── Fetch all data from REST API when season changes ──────────────────
   useEffect(() => {
+    dispatch({ type: 'LOADING' });
     async function fetchAll() {
       try {
         const [standingsRes, matchesRes, teamsRes, seasonsRes] = await Promise.all([
-          fetch(`/api/seasons/${SEASON_ID}/standings`),
-          fetch(`/api/seasons/${SEASON_ID}/matches`),
+          fetch(`/api/seasons/${selectedSeasonId}/standings`),
+          fetch(`/api/seasons/${selectedSeasonId}/matches`),
           fetch('/api/teams'),
           fetch('/api/seasons'),
         ]);
@@ -221,8 +209,11 @@ export function SimulationProvider({ children }) {
         const teamsData = teamsRes.ok ? await teamsRes.json() : [];
         const seasonsData = seasonsRes.ok ? await seasonsRes.json() : [];
 
+        // Store all available seasons for the dropdowns
+        setAllSeasons(seasonsData);
+
         // Extract external IDs and slug/year for the current season
-        const currentSeasonInfo = seasonsData.find((s) => String(s.id) === String(SEASON_ID));
+        const currentSeasonInfo = seasonsData.find((s) => String(s.id) === String(selectedSeasonId));
         const leagueExternalId = currentSeasonInfo?.leagueExternalId ?? null;
         const seasonExternalId = currentSeasonInfo?.seasonExternalId ?? null;
         const leagueSlug = currentSeasonInfo?.leagueSlug ?? null;
@@ -270,6 +261,7 @@ export function SimulationProvider({ children }) {
           status: m.status,
           winnerCode: m.winnerCode,
           startTimestamp: m.startTimestamp,
+          probIsFinal: m.probIsFinal ?? false,
         }));
 
         dispatch({
@@ -281,7 +273,7 @@ export function SimulationProvider({ children }) {
       }
     }
     fetchAll();
-  }, []);
+  }, [selectedSeasonId]);
 
   // ── Compute projected standings ────────────────────────────────────────
   const projectedStandings = useMemo(() => {
@@ -305,7 +297,7 @@ export function SimulationProvider({ children }) {
   async function saveSimulationToAPI(name) {
     const body = {
       name,
-      seasonId: SEASON_ID,
+      seasonId: selectedSeasonId,
       results: state.results,
       scores: state.scores,
       uuid: state.activeSimulationUuid || undefined,
@@ -350,14 +342,14 @@ export function SimulationProvider({ children }) {
     saveSimulationToAPI,
     loadSimulationFromAPI,
     deleteSimulationFromAPI,
-    SEASON_ID,
+    SEASON_ID: selectedSeasonId,
+    allSeasons,
+    selectedSeasonId,
+    setSelectedSeasonId,
     leagueSlug: state.leagueSlug,
     seasonYear: state.seasonYear,
     leagueExternalId: state.leagueExternalId,
     seasonExternalId: state.seasonExternalId,
-    probSources,
-    selectedProbSource,
-    setProbSource: setSelectedProbSource,
   };
   return (
     <SimulationContext.Provider value={value}>{children}</SimulationContext.Provider>

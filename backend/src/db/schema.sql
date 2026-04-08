@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS matches (
   locked_result   VARCHAR(10),           -- "1-3" style string when locked
   prob_home       NUMERIC(6,4),
   prob_draw       NUMERIC(6,4),
-  prob_away       NUMERIC(6,4)
+  prob_away       NUMERIC(6,4),
+  prob_is_final   BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- Base standings snapshot (taken at the start of the simulation window)
@@ -117,3 +118,4 @@ CREATE TABLE IF NOT EXISTS match_probabilities (
 -- Idempotent column additions for existing databases
 ALTER TABLE leagues  ADD COLUMN IF NOT EXISTS external_id INTEGER;
 ALTER TABLE seasons  ADD COLUMN IF NOT EXISTS external_id INTEGER;
+ALTER TABLE matches  ADD COLUMN IF NOT EXISTS prob_is_final BOOLEAN NOT NULL DEFAULT FALSE;
