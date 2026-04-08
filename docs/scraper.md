@@ -24,18 +24,21 @@ python sofascore.py
 python sofascore.py --from-jornada 30 --to-jornada 42
 
 # Especificar IDs de liga/temporada de SofaScore (si cambian de temporada)
-python sofascore.py --league 54 --season 77558
+python sofascore.py --league-sf 54 --season-sf 77558
 ```
 
 ## Argumentos
 
-| Argumento          | Descripción                                           | Default    |
-|--------------------|-------------------------------------------------------|------------|
-| `--from-jornada N` | Primera jornada a scrapear                           | Auto-detect |
-| `--to-jornada N`   | Última jornada a scrapear                             | `42`       |
-| `--league N`       | ID de liga en SofaScore (`uniqueTournament`)          | `54`       |
-| `--season N`       | ID de temporada en SofaScore                          | `77558`    |
-| `--init-teams`     | Siembra equipos desde la API de standings antes de scrapear | `false` |
+| Argumento            | Descripción                                           | Default    |
+|----------------------|-------------------------------------------------------|------------|
+| `--from-jornada N`   | Primera jornada a scrapear                           | Auto-detect |
+| `--to-jornada N`     | Última jornada a scrapear                             | `42`       |
+| `--league-sf N`      | ID de liga en SofaScore (`uniqueTournament`)          | `54`       |
+| `--season-sf N`      | ID de temporada en SofaScore                          | `77558`    |
+| `--league-name NAME` | Nombre completo de la liga                            | `LaLiga 2` |
+| `--league-slug SLUG` | Slug interno de la liga                               | `laliga2`  |
+| `--season-year YEAR` | Año de la temporada (ej: `25/26`)                    | `25/26`    |
+| `--init-teams`       | Siembra equipos desde la API de standings antes de scrapear | `false` |
 
 La auto-detección busca la primera jornada donde no todos los partidos están finalizados, menos 1 de buffer. Cuando no hay equipos en la temporada (primera ejecución), `--init-teams` se activa automáticamente.
 

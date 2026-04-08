@@ -444,7 +444,7 @@ def main():
                 if args.init_teams or not has_teams_for_season(conn, season_id):
                     print("Fetching teams from standings API...")
                     standings_data = fetch_standings(args.league_sf, args.season_sf, browser)
-                    seed_teams_from_standings(conn, season_id, standings_data, args.league_name)
+                    seed_teams_from_standings(conn, season_id, standings_data, args.league_sf)
 
                 from_jornada = args.from_jornada
                 if from_jornada is None:

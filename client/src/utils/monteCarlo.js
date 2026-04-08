@@ -73,8 +73,10 @@ export function runMonteCarloSimulations(
         simResults[match.id] = currentResults[match.id];
         simScores[match.id] = currentScores[match.id] || { home: 0, away: 0 };
       } else {
-        // Use real odds when available (probIsFinal), otherwise use standings-based probs
-        const p = pronosticos[match.id] ?? positionBasedProb(match.homeTeam, match.awayTeam, positionMap);
+        // Use real odds only when probIsFinal is true, otherwise use standings-based probs
+        const p = (match.probIsFinal && pronosticos[match.id])
+          ? pronosticos[match.id]
+          : positionBasedProb(match.homeTeam, match.awayTeam, positionMap);
         const rand = Math.random();
 
         if (rand < p.local) {
