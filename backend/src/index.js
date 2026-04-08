@@ -48,19 +48,40 @@ app.use('/api/seasons/:seasonId/standings', standingsRouter);
 app.use('/api/simulations', simulationsRouter);
 app.use('/api/probability-sources', probabilitySourcesRouter);
 
-// Convenience shortcut: GET /api/seasons returns the default season id
+// GET /api/seasons – list all seasons with league info and zone config
 app.get('/api/seasons', async (_req, res, next) => {
   try {
     // Lazily import pool to avoid circular deps
     const { default: pool } = await import('./db/connection.js');
-    const { rows } = await pool.query(
-      `SELECT s.id, s.year, s.name, s.external_id AS "seasonExternalId",
-              l.name AS "leagueName", l.slug AS "leagueSlug", l.id AS "leagueId",
-              l.external_id AS "leagueExternalId"
-       FROM seasons s JOIN leagues l ON l.id = s.league_id
-       ORDER BY s.id DESC`,
-    );
-    res.json(rows);
+    const [seasonsResult, zonesResult] = await Promise.all([
+      pool.query(
+        `SELECT s.id, s.year, s.name, s.external_id AS "seasonExternalId",
+                l.name AS "leagueName", l.slug AS "leagueSlug", l.id AS "leagueId",
+                l.external_id AS "leagueExternalId"
+         FROM seasons s JOIN leagues l ON l.id = s.league_id
+         ORDER BY s.id DESC`,
+      ),
+      pool.query(
+        `SELECT league_slug AS "leagueSlug", key, label,
+                color, text_color AS "textColor", border_color AS "borderColor",
+                min_pos AS "minPos", max_pos AS "maxPos", sort_order AS "sortOrder"
+         FROM league_zones ORDER BY league_slug, sort_order`,
+      ),
+    ]);
+
+    // Group zones by leagueSlug
+    const zonesByLeague = {};
+    for (const z of zonesResult.rows) {
+      if (!zonesByLeague[z.leagueSlug]) zonesByLeague[z.leagueSlug] = [];
+      const { leagueSlug: _ls, ...rest } = z;
+      zonesByLeague[_ls].push(rest);
+    }
+
+    const seasons = seasonsResult.rows.map((s) => ({
+      ...s,
+      zones: zonesByLeague[s.leagueSlug] ?? [],
+    }));
+    res.json(seasons);
   } catch (err) {
     next(err);
   }

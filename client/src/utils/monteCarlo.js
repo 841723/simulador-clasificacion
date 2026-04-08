@@ -31,6 +31,19 @@ function positionBasedProb(homeTeam, awayTeam, positionMap) {
 }
 
 /**
+ * Assign a zone key to a position given an array of zone definitions.
+ * Each zone has minPos (nullable) and maxPos (nullable).
+ */
+function getZoneKey(position, zones) {
+  for (const z of zones) {
+    const aboveMin = z.minPos == null || position >= z.minPos;
+    const belowMax = z.maxPos == null || position <= z.maxPos;
+    if (aboveMin && belowMax) return z.key;
+  }
+  return 'mid';
+}
+
+/**
  * Run N Monte Carlo simulations to estimate the probability of each team
  * finishing in each classification zone.
  *
@@ -41,7 +54,8 @@ function positionBasedProb(homeTeam, awayTeam, positionMap) {
  * @param {Object} currentScores    - matchId → { home, away }
  * @param {Object} currentResults   - matchId → '1'|'X'|'2'
  * @param {number} N                - number of simulations (default 500)
- * @returns {Object} teamName → { ascenso, playoff, mid, descenso } (percentages as numbers)
+ * @param {Array}  zones            - zone definitions from league config (optional)
+ * @returns {Object} teamName → { [zoneKey]: percentage } (percentages as numbers)
  */
 export function runMonteCarloSimulations(
   allMatches,
@@ -51,13 +65,18 @@ export function runMonteCarloSimulations(
   currentScores,
   currentResults,
   N = 500,
+  zones = [],
 ) {
+  // Derive zone keys from config, fallback to legacy keys
+  const zoneKeys = zones.length > 0 ? zones.map((z) => z.key) : ['ascenso', 'playoff', 'mid', 'descenso'];
+  const emptyCount = () => Object.fromEntries(zoneKeys.map((k) => [k, 0]));
+
   const counts = {};
 
   // Initialise counters for every team that appears in any match
   for (const match of allMatches) {
-    if (!counts[match.homeTeam]) counts[match.homeTeam] = { ascenso: 0, playoff: 0, mid: 0, descenso: 0 };
-    if (!counts[match.awayTeam]) counts[match.awayTeam] = { ascenso: 0, playoff: 0, mid: 0, descenso: 0 };
+    if (!counts[match.homeTeam]) counts[match.homeTeam] = emptyCount();
+    if (!counts[match.awayTeam]) counts[match.awayTeam] = emptyCount();
   }
 
   // Build position map from base standings for fallback probability computation
@@ -103,10 +122,10 @@ export function runMonteCarloSimulations(
     for (const row of standings) {
       const c = counts[row.team.name];
       if (!c) continue;
-      if (row.position <= 2) c.ascenso++;
-      else if (row.position <= 6) c.playoff++;
-      else if (row.position >= 19) c.descenso++;
-      else c.mid++;
+      const key = zones.length > 0
+        ? getZoneKey(row.position, zones)
+        : (row.position <= 2 ? 'ascenso' : row.position <= 6 ? 'playoff' : row.position >= 19 ? 'descenso' : 'mid');
+      if (c[key] !== undefined) c[key]++;
     }
   }
 
@@ -114,12 +133,9 @@ export function runMonteCarloSimulations(
   return Object.fromEntries(
     Object.entries(counts).map(([team, c]) => [
       team,
-      {
-        ascenso: parseFloat((c.ascenso / N * 100).toFixed(1)),
-        playoff: parseFloat((c.playoff / N * 100).toFixed(1)),
-        mid: parseFloat((c.mid / N * 100).toFixed(1)),
-        descenso: parseFloat((c.descenso / N * 100).toFixed(1)),
-      },
+      Object.fromEntries(
+        Object.entries(c).map(([k, v]) => [k, parseFloat((v / N * 100).toFixed(1))]),
+      ),
     ]),
   );
 }

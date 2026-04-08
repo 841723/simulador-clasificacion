@@ -2,23 +2,26 @@ import { useSimulation } from '../context/SimulationContext';
 import { getTeamColor } from '../utils/teamColors';
 import TeamLogo from './TeamLogo';
 
-// Zone config for LaLiga 2
-const ZONES = [
-  { label: 'Ascenso', color: 'bg-emerald-500', max: 2 },
-  { label: 'Playoff', color: 'bg-blue-400', min: 3, max: 6 },
-  { label: 'Descenso', color: 'bg-rose-400', min: 19 },
+// Default zone config (fallback for LaLiga 2 when DB zones not yet loaded)
+const DEFAULT_ZONES = [
+  { key: 'ascenso',  label: 'Ascenso',   color: 'bg-emerald-500', borderColor: 'border-emerald-500', minPos: 1,  maxPos: 2    },
+  { key: 'playoff',  label: 'Playoff',   color: 'bg-blue-400',    borderColor: 'border-blue-400',    minPos: 3,  maxPos: 6    },
+  { key: 'mid',      label: null,        color: 'bg-gray-300',    borderColor: 'border-transparent', minPos: 7,  maxPos: 18   },
+  { key: 'descenso', label: 'Descenso',  color: 'bg-rose-400',    borderColor: 'border-rose-400',    minPos: 19, maxPos: null },
 ];
 
-function getZoneBorder(position) {
-  if (position <= 2) return 'border-l-4 border-emerald-500';
-  if (position <= 6) return 'border-l-4 border-blue-400';
-  if (position >= 19) return 'border-l-4 border-rose-400';
-  return 'border-l-4 border-transparent';
+function getZoneBorder(position, zones) {
+  const z = zones.find(
+    (z) => (z.minPos == null || position >= z.minPos) && (z.maxPos == null || position <= z.maxPos),
+  );
+  if (!z || z.borderColor === 'border-transparent') return 'border-l-4 border-transparent';
+  return `border-l-4 ${z.borderColor}`;
 }
 
 export default function StandingsTable() {
-  const { projectedStandings, state, dispatch } = useSimulation();
+  const { projectedStandings, state, dispatch, currentZones } = useSimulation();
   const selected = state.selectedTeams;
+  const zones = currentZones.length > 0 ? currentZones : DEFAULT_ZONES;
 
   function toggleTeam(name) {
     dispatch({ type: 'TOGGLE_TEAM', payload: { teamName: name } });
@@ -56,7 +59,7 @@ export default function StandingsTable() {
                 <tr
                   key={row.team.name}
                   onClick={() => toggleTeam(row.team.name)}
-                  className={`cursor-pointer transition-colors ${getZoneBorder(row.position)} ${
+                  className={`cursor-pointer transition-colors ${getZoneBorder(row.position, zones)} ${
                     isSelected && color
                       ? `${color.row} hover:brightness-95`
                       : 'hover:bg-gray-50 odd:bg-white even:bg-gray-50/60'
@@ -103,10 +106,10 @@ export default function StandingsTable() {
         </table>
       </div>
 
-      {/* Legend */}
+      {/* Legend – only show named zones */}
       <div className="mt-2 px-1 flex flex-col gap-0.5">
-        {ZONES.map((z) => (
-          <div key={z.label} className="flex items-center gap-1.5 text-xs text-gray-500">
+        {zones.filter((z) => z.label).map((z) => (
+          <div key={z.key} className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className={`w-2 h-2 rounded-sm shrink-0 ${z.color}`} />
             {z.label}
           </div>

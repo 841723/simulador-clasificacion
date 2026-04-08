@@ -1,30 +1,14 @@
 import { useMemo } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useSimulation } from '../context/SimulationContext';
 import { Logo } from "./Logo.jsx";
 
 export default function Header() {
-  const { state, leagueSlug, seasonYear, allSeasons, selectedSeasonId, setSelectedSeasonId } = useSimulation();
+  const { state, allSeasons, leagueSlug, seasonYear } = useSimulation();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Build canonical tab paths once slug/year are known
-  const jornadaPath = leagueSlug && seasonYear && state.currentJornada
-    ? `/jornadas/${leagueSlug}/${seasonYear}/${state.currentJornada}`
-    : '/jornadas';
-  const equiposPath = leagueSlug && seasonYear
-    ? `/equipos/${leagueSlug}/${seasonYear}`
-    : '/equipos';
-  const clasificacionPath = leagueSlug && seasonYear && state.currentJornada
-    ? `/clasificacion/${leagueSlug}/${seasonYear}/${state.currentJornada}`
-    : '/clasificacion';
-
-  const TABS = [
-    { path: jornadaPath,      base: '/jornadas',      label: 'Jornadas' },
-    { path: equiposPath,      base: '/equipos',       label: 'Equipos' },
-    { path: clasificacionPath, base: '/clasificacion', label: 'Clasificación' },
-  ];
-
-  // Derive unique leagues from allSeasons
+  // ── Derive unique leagues ──────────────────────────────────────────────
   const leagues = useMemo(() => {
     const seen = new Set();
     return allSeasons.filter((s) => {
@@ -34,27 +18,58 @@ export default function Header() {
     });
   }, [allSeasons]);
 
-  // Current season info
-  const currentSeason = allSeasons.find((s) => String(s.id) === String(selectedSeasonId));
-  const currentLeagueSlug = currentSeason?.leagueSlug ?? '';
+  // Current league / season from URL params (or from loaded state as fallback)
+  const currentLeagueSlug = leagueSlug ?? '';
+  const currentSeasonYear = seasonYear ?? '';  // e.g. "25-26"
 
-  // Seasons for the current league
+  // Seasons for the active league
   const seasonsForLeague = useMemo(
     () => allSeasons.filter((s) => s.leagueSlug === currentLeagueSlug),
     [allSeasons, currentLeagueSlug],
   );
 
-  function handleLeagueChange(newLeagueSlug) {
-    // Pick the first (most recent) season of the selected league
-    const first = allSeasons.find((s) => s.leagueSlug === newLeagueSlug);
-    if (first) handleSeasonChange(first.id);
+  // ── Navigation helpers ─────────────────────────────────────────────────
+  // Build path keeping the same view but swapping league/season
+  function buildPath(newLeagueSlug, newSeasonYear) {
+    const fy = newSeasonYear.replace('/', '-');
+    const path = location.pathname;
+    if (path.startsWith('/equipos')) return `/equipos/${newLeagueSlug}/${fy}`;
+    if (path.startsWith('/clasificacion')) {
+      // keep jornada if present
+      const m = path.match(/^\/clasificacion\/[^/]+\/[^/]+\/(\d+)/);
+      return m ? `/clasificacion/${newLeagueSlug}/${fy}/${m[1]}` : `/clasificacion/${newLeagueSlug}/${fy}`;
+    }
+    // jornadas (default)
+    const m = path.match(/^\/jornadas\/[^/]+\/[^/]+\/(\d+)/);
+    return m ? `/jornadas/${newLeagueSlug}/${fy}/${m[1]}` : `/jornadas/${newLeagueSlug}/${fy}`;
   }
 
-  function handleSeasonChange(newSeasonId) {
-    setSelectedSeasonId(newSeasonId);
-    // Navigate to jornadas root so it auto-redirects to the right jornada
-    navigate('/jornadas');
+  function handleLeagueChange(newLeagueSlug) {
+    const firstSeason = allSeasons.find((s) => s.leagueSlug === newLeagueSlug);
+    if (!firstSeason) return;
+    navigate(buildPath(newLeagueSlug, firstSeason.year), { replace: false });
   }
+
+  function handleSeasonChange(newSeasonYear) {
+    navigate(buildPath(currentLeagueSlug, newSeasonYear), { replace: false });
+  }
+
+  // ── Tab paths (canonical, with slug/year/jornada) ─────────────────────
+  const jornadaPath = currentLeagueSlug && currentSeasonYear && state.currentJornada
+    ? `/jornadas/${currentLeagueSlug}/${currentSeasonYear}/${state.currentJornada}`
+    : '/jornadas';
+  const equiposPath = currentLeagueSlug && currentSeasonYear
+    ? `/equipos/${currentLeagueSlug}/${currentSeasonYear}`
+    : '/equipos';
+  const clasificacionPath = currentLeagueSlug && currentSeasonYear && state.currentJornada
+    ? `/clasificacion/${currentLeagueSlug}/${currentSeasonYear}/${state.currentJornada}`
+    : '/clasificacion';
+
+  const TABS = [
+    { path: jornadaPath,      base: '/jornadas',      label: 'Jornadas' },
+    { path: equiposPath,      base: '/equipos',       label: 'Equipos' },
+    { path: clasificacionPath, base: '/clasificacion', label: 'Clasificación' },
+  ];
 
   return (
     <header className="bg-blue-900 text-white shadow-lg">
@@ -66,36 +81,31 @@ export default function Header() {
           </picture>
           <div className="min-w-0">
             <h1 className="text-base font-bold leading-tight">Simulador de Clasificación</h1>
-            {/* League / season selector */}
             <div className="flex items-center gap-1.5 mt-0.5">
-              {/* League dropdown */}
+              {/* League dropdown – shows current league, navigates on change */}
               <select
-                className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 cursor-pointer"
+                className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 value={currentLeagueSlug}
                 onChange={(e) => handleLeagueChange(e.target.value)}
                 disabled={leagues.length <= 1}
               >
-                {leagues.length === 0 && (
-                  <option value="">—</option>
-                )}
+                {leagues.length === 0 && <option value="">—</option>}
                 {leagues.map((l) => (
                   <option key={l.leagueSlug} value={l.leagueSlug}>
                     {l.leagueName}
                   </option>
                 ))}
               </select>
-              {/* Season dropdown */}
+              {/* Season dropdown – shows current season year, navigates on change */}
               <select
-                className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 cursor-pointer"
-                value={selectedSeasonId}
-                onChange={(e) => handleSeasonChange(Number(e.target.value))}
+                className="bg-blue-800 text-blue-100 text-xs rounded px-1.5 py-0.5 border border-blue-600 focus:outline-none focus:border-blue-400 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                value={currentSeasonYear.replace('-', '/')}  /* stored as "25/26", shown that way */
+                onChange={(e) => handleSeasonChange(e.target.value)}
                 disabled={seasonsForLeague.length <= 1}
               >
-                {seasonsForLeague.length === 0 && (
-                  <option value="">—</option>
-                )}
+                {seasonsForLeague.length === 0 && <option value="">—</option>}
                 {seasonsForLeague.map((s) => (
-                  <option key={s.id} value={s.id}>
+                  <option key={s.id} value={s.year}>
                     {s.year}
                   </option>
                 ))}
@@ -145,4 +155,3 @@ export default function Header() {
     </header>
   );
 }
-

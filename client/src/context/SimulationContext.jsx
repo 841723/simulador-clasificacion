@@ -11,30 +11,29 @@ import { computeCurrentJornada } from '../utils/navigation';
 const SimulationContext = createContext(null);
 
 // Default season id – can be overridden via VITE_SEASON_ID env var
-const SEASON_ID = import.meta.env.VITE_SEASON_ID || 1;
+const DEFAULT_SEASON_ID = import.meta.env.VITE_SEASON_ID || null;
 
 const initialState = {
   loading: true,
   error: null,
-  seasonId: SEASON_ID,
-  leagueSlug: null,         // leagues.slug (e.g. "laliga2")
-  seasonYear: null,         // seasons.year with "/" → "-" (e.g. "25-26")
-  leagueExternalId: null,   // SofaScore uniqueTournament id (kept for reference)
-  seasonExternalId: null,   // SofaScore season id (kept for reference)
-  baseStandings: [],          // raw rows from API
-  allMatches: [],             // flat list of all matches
-  results: {},                // matchId → "1" | "X" | "2"
-  originalResults: {},        // initial computed results (for reset)
-  scores: {},                 // matchId → { home: number, away: number }
-  originalScores: {},         // initial computed scores (for reset)
-  lockedMatchIds: {},         // matchId → resultado string (e.g. "1-3")
-  pronosticos: {},            // matchId → { local, empate, visitante }
-  savedSimulations: {},       // uuid → { uuid, name, results?, scores? }
-  activeSimulationName: null, // name of currently loaded/saved simulation
-  activeSimulationUuid: null, // uuid of currently loaded/saved simulation
+  leagueSlug: null,
+  seasonYear: null,
+  leagueExternalId: null,
+  seasonExternalId: null,
+  baseStandings: [],
+  allMatches: [],
+  results: {},
+  originalResults: {},
+  scores: {},
+  originalScores: {},
+  lockedMatchIds: {},
+  pronosticos: {},
+  savedSimulations: {},
+  activeSimulationName: null,
+  activeSimulationUuid: null,
   selectedTeams: [],
-  currentJornada: null,       // computed from next future match after data loads
-  activeView: 'jornada',      // 'jornada' | 'teams' | 'clasificacion'
+  currentJornada: null,
+  activeView: 'jornada',
 };
 
 function reducer(state, action) {
@@ -169,11 +168,53 @@ export function SimulationProvider({ children }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [teamImages, setTeamImages] = React.useState({});
   const [teamSlugMap, setTeamSlugMap] = React.useState({});
-  const [allSeasons, setAllSeasons] = React.useState([]);   // all available seasons
-  const [selectedSeasonId, setSelectedSeasonId] = React.useState(SEASON_ID);
 
-  // ── Load saved simulations from API on mount ────────────────────────────
+  // ── All seasons (loaded once on mount) ────────────────────────────────
+  const [allSeasons, setAllSeasons] = React.useState([]);
+  const [seasonsLoaded, setSeasonsLoaded] = React.useState(false);
+
+  // ── selectedSeasonId is driven by the URL (via UrlSeasonSync in App.jsx) ──
+  // Starts as null; UrlSeasonSync will set it once allSeasons is loaded.
+  const [selectedSeasonId, setSelectedSeasonIdRaw] = React.useState(
+    DEFAULT_SEASON_ID ? Number(DEFAULT_SEASON_ID) : null,
+  );
+
+  // ── Load allSeasons once on mount ─────────────────────────────────────
   useEffect(() => {
+    async function loadSeasons() {
+      try {
+        const res = await fetch('/api/seasons');
+        if (!res.ok) return;
+        const data = await res.json();
+        setAllSeasons(data);
+      } catch {
+        // silently ignore
+      } finally {
+        setSeasonsLoaded(true);
+      }
+    }
+    loadSeasons();
+  }, []);
+
+  // Helper: find seasonId from leagueSlug + year URL param (e.g. "25-26")
+  function findSeasonId(leagueSlug, yearParam) {
+    const yearNormalized = yearParam ? yearParam.replace(/-/g, '/') : null;
+    const match = allSeasons.find(
+      (s) =>
+        s.leagueSlug === leagueSlug &&
+        (yearNormalized ? s.year === yearNormalized : true),
+    );
+    return match?.id ?? null;
+  }
+
+  // Public setter: only triggers reload if the ID actually changed
+  const setSelectedSeasonId = React.useCallback((id) => {
+    setSelectedSeasonIdRaw((prev) => (prev === id ? prev : id));
+  }, []);
+
+  // ── Load saved simulations when season changes ────────────────────────
+  useEffect(() => {
+    if (!selectedSeasonId) return;
     async function loadSims() {
       try {
         const res = await fetch(`/api/simulations?seasonId=${selectedSeasonId}`);
@@ -183,22 +224,22 @@ export function SimulationProvider({ children }) {
         for (const s of sims) simMap[s.uuid] = s;
         dispatch({ type: 'LOAD_SAVED_SIMS', payload: simMap });
       } catch {
-        // silently ignore – app works without saved simulations
+        // silently ignore
       }
     }
     loadSims();
   }, [selectedSeasonId]);
 
-  // ── Fetch all data from REST API when season changes ──────────────────
+  // ── Fetch season data when selectedSeasonId changes ───────────────────
   useEffect(() => {
+    if (!selectedSeasonId) return;
     dispatch({ type: 'LOADING' });
     async function fetchAll() {
       try {
-        const [standingsRes, matchesRes, teamsRes, seasonsRes] = await Promise.all([
+        const [standingsRes, matchesRes, teamsRes] = await Promise.all([
           fetch(`/api/seasons/${selectedSeasonId}/standings`),
           fetch(`/api/seasons/${selectedSeasonId}/matches`),
           fetch('/api/teams'),
-          fetch('/api/seasons'),
         ]);
 
         if (!standingsRes.ok) throw new Error(`Standings API error: ${standingsRes.status}`);
@@ -207,26 +248,21 @@ export function SimulationProvider({ children }) {
         const baseStandings = await standingsRes.json();
         const matchesData = await matchesRes.json();
         const teamsData = teamsRes.ok ? await teamsRes.json() : [];
-        const seasonsData = seasonsRes.ok ? await seasonsRes.json() : [];
 
-        // Store all available seasons for the dropdowns
-        setAllSeasons(seasonsData);
-
-        // Extract external IDs and slug/year for the current season
-        const currentSeasonInfo = seasonsData.find((s) => String(s.id) === String(selectedSeasonId));
+        // Use already-loaded allSeasons to find current season info
+        const currentSeasonInfo = allSeasons.find((s) => String(s.id) === String(selectedSeasonId));
         const leagueExternalId = currentSeasonInfo?.leagueExternalId ?? null;
         const seasonExternalId = currentSeasonInfo?.seasonExternalId ?? null;
         const leagueSlug = currentSeasonInfo?.leagueSlug ?? null;
         const seasonYear = currentSeasonInfo?.year ? currentSeasonInfo.year.replace('/', '-') : null;
 
-        // Build team images map: slug → imageUrl
+        // Build team images map
         const images = {};
         const slugMap = {};
         for (const t of teamsData) {
           if (t.imageUrl) images[t.slug] = t.imageUrl;
           if (t.name) slugMap[t.name] = t.slug;
         }
-        // Also pick up image URLs from matches data
         for (const m of matchesData) {
           if (m.homeTeamImageUrl) images[m.homeTeamSlug] = m.homeTeamImageUrl;
           if (m.awayTeamImageUrl) images[m.awayTeamSlug] = m.awayTeamImageUrl;
@@ -236,7 +272,7 @@ export function SimulationProvider({ children }) {
         setTeamImages(images);
         setTeamSlugMap(slugMap);
 
-        // Build lockedMatchIds and pronosticos from matches
+        // Build lockedMatchIds and pronosticos
         const lockedMatchIds = {};
         const pronosticos = {};
         for (const m of matchesData) {
@@ -248,7 +284,6 @@ export function SimulationProvider({ children }) {
           }
         }
 
-        // Shape matches to the format standings.js expects
         const allMatches = matchesData.map((m) => ({
           id: m.id,
           jornada: m.jornada,
@@ -273,6 +308,8 @@ export function SimulationProvider({ children }) {
       }
     }
     fetchAll();
+  // We intentionally don't include allSeasons in deps – it's stable after first load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSeasonId]);
 
   // ── Compute projected standings ────────────────────────────────────────
@@ -287,13 +324,19 @@ export function SimulationProvider({ children }) {
     );
   }, [state.baseStandings, state.allMatches, state.results, state.lockedMatchIds, state.scores]);
 
-  // ── Derive JORNADAS list dynamically from loaded matches ───────────────
+  // ── Derive JORNADAS list dynamically ──────────────────────────────────
   const JORNADAS = useMemo(
     () => [...new Set(state.allMatches.map((m) => m.jornada))].sort((a, b) => a - b),
     [state.allMatches],
   );
 
-  // ── Simulation persistence helpers (callable from SimulationManager) ───
+  // ── Current season's zone config ──────────────────────────────────────
+  const currentZones = useMemo(() => {
+    const season = allSeasons.find((s) => String(s.id) === String(selectedSeasonId));
+    return season?.zones ?? [];
+  }, [allSeasons, selectedSeasonId]);
+
+  // ── Simulation persistence helpers ────────────────────────────────────
   async function saveSimulationToAPI(name) {
     const body = {
       name,
@@ -344,8 +387,11 @@ export function SimulationProvider({ children }) {
     deleteSimulationFromAPI,
     SEASON_ID: selectedSeasonId,
     allSeasons,
+    seasonsLoaded,
     selectedSeasonId,
     setSelectedSeasonId,
+    findSeasonId,
+    currentZones,
     leagueSlug: state.leagueSlug,
     seasonYear: state.seasonYear,
     leagueExternalId: state.leagueExternalId,

@@ -115,7 +115,47 @@ CREATE TABLE IF NOT EXISTS match_probabilities (
   UNIQUE (match_id, source_id)
 );
 
+-- League zone definitions (for classification coloring and Monte Carlo)
+CREATE TABLE IF NOT EXISTS league_zones (
+  id          SERIAL PRIMARY KEY,
+  league_slug VARCHAR(50)  NOT NULL REFERENCES leagues(slug) ON DELETE CASCADE,
+  key         VARCHAR(50)  NOT NULL,  -- e.g. 'ascenso', 'playoff', 'mid', 'descenso'
+  label       VARCHAR(100) NOT NULL,  -- e.g. 'Ascenso directo'
+  color       VARCHAR(50)  NOT NULL,  -- Tailwind bg class e.g. 'bg-emerald-500'
+  text_color  VARCHAR(50)  NOT NULL,  -- Tailwind text class e.g. 'text-emerald-600'
+  border_color VARCHAR(50) NOT NULL,  -- Tailwind border class e.g. 'border-emerald-500'
+  min_pos     INTEGER,                -- inclusive lower bound (null = no lower bound)
+  max_pos     INTEGER,                -- inclusive upper bound (null = no upper bound)
+  sort_order  INTEGER NOT NULL DEFAULT 0,
+  UNIQUE (league_slug, key)
+);
+
 -- Idempotent column additions for existing databases
 ALTER TABLE leagues  ADD COLUMN IF NOT EXISTS external_id INTEGER;
 ALTER TABLE seasons  ADD COLUMN IF NOT EXISTS external_id INTEGER;
 ALTER TABLE matches  ADD COLUMN IF NOT EXISTS prob_is_final BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE teams    ADD COLUMN IF NOT EXISTS image_url TEXT;
+ALTER TABLE teams    ADD COLUMN IF NOT EXISTS external_id INTEGER;
+
+-- Seed zone definitions (upsert so re-running is safe)
+INSERT INTO league_zones (league_slug, key, label, color, text_color, border_color, min_pos, max_pos, sort_order)
+VALUES
+  -- LaLiga 2 zones
+  ('laliga2', 'ascenso',  'Ascenso directo', 'bg-emerald-500', 'text-emerald-600', 'border-emerald-500', 1,  2,  0),
+  ('laliga2', 'playoff',  'Playoff',          'bg-blue-400',    'text-blue-600',    'border-blue-400',    3,  6,  1),
+  ('laliga2', 'mid',      'Permanencia',      'bg-gray-300',    'text-gray-500',    'border-transparent', 7,  18, 2),
+  ('laliga2', 'descenso', 'Descenso',         'bg-rose-400',    'text-rose-600',    'border-rose-400',    19, NULL, 3),
+  -- LaLiga zones
+  ('laliga',  'champions', 'Champions League', 'bg-blue-600',   'text-blue-700',    'border-blue-600',    1,  4,  0),
+  ('laliga',  'europa',    'Europa League',    'bg-orange-400',  'text-orange-600',  'border-orange-400',  5,  6,  1),
+  ('laliga',  'conference','Conference League','bg-green-400',   'text-green-600',   'border-green-400',   7,  7,  2),
+  ('laliga',  'mid',       'Permanencia',      'bg-gray-300',    'text-gray-500',    'border-transparent', 8,  17, 3),
+  ('laliga',  'descenso',  'Descenso',         'bg-rose-400',    'text-rose-600',    'border-rose-400',    18, NULL, 4)
+ON CONFLICT (league_slug, key) DO UPDATE
+  SET label        = EXCLUDED.label,
+      color        = EXCLUDED.color,
+      text_color   = EXCLUDED.text_color,
+      border_color = EXCLUDED.border_color,
+      min_pos      = EXCLUDED.min_pos,
+      max_pos      = EXCLUDED.max_pos,
+      sort_order   = EXCLUDED.sort_order;

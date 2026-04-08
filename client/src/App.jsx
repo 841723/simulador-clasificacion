@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useSimulation } from "./context/SimulationContext";
 import Header from "./components/Header";
@@ -9,7 +9,53 @@ import StandingsTable from "./components/StandingsTable";
 import ClasificacionView from "./components/ClasificacionView";
 import { Logo } from "./components/Logo";
 
-// Sync URL → state.activeView so legacy code that reads activeView still works
+// ── URL → season syncer ────────────────────────────────────────────────────────
+// Reads leagueSlug/seasonYear from the current URL path and keeps
+// selectedSeasonId in sync. The URL is the source of truth.
+function UrlSeasonSync() {
+    const { allSeasons, seasonsLoaded, selectedSeasonId, setSelectedSeasonId, findSeasonId } = useSimulation();
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (!seasonsLoaded || allSeasons.length === 0) return;
+
+        // Parse leagueSlug and seasonYear from any known URL pattern
+        const path = location.pathname;
+        const match =
+            path.match(/^\/(?:jornadas|equipos|clasificacion)\/([^/]+)\/([^/]+)(?:\/|$)/) ||
+            path.match(/^\/(?:jornadas|equipos|clasificacion)\/([^/]+)\/([^/]+)$/);
+
+        if (match) {
+            const urlLeagueSlug = match[1];
+            const urlSeasonYear = match[2]; // e.g. "25-26"
+            const foundId = findSeasonId(urlLeagueSlug, urlSeasonYear);
+            if (foundId && foundId !== selectedSeasonId) {
+                setSelectedSeasonId(foundId);
+            } else if (!foundId) {
+                // URL slug/year don't match any known season → redirect to default
+                const defaultSeason = allSeasons[0];
+                if (defaultSeason) {
+                    const fy = defaultSeason.year.replace('/', '-');
+                    const base = path.startsWith('/equipos') ? 'equipos' :
+                                  path.startsWith('/clasificacion') ? 'clasificacion' : 'jornadas';
+                    navigate(`/${base}/${defaultSeason.leagueSlug}/${fy}`, { replace: true });
+                }
+            }
+        } else {
+            // Bare URL (/jornadas, /equipos, /clasificacion, /) – use already selected season
+            // If nothing is selected yet, pick the first available season
+            if (!selectedSeasonId && allSeasons.length > 0) {
+                setSelectedSeasonId(allSeasons[0].id);
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname, seasonsLoaded, allSeasons]);
+
+    return null;
+}
+
+// ── View syncer (activeView for legacy code) ──────────────────────────────────
 function ViewSyncer() {
     const { dispatch } = useSimulation();
     const location = useLocation();
@@ -22,9 +68,10 @@ function ViewSyncer() {
 }
 
 function AppContent() {
-    const { state } = useSimulation();
+    const { state, seasonsLoaded } = useSimulation();
 
-    if (state.loading) {
+    // Show loading screen while seasons haven't loaded yet OR while data is loading
+    if (!seasonsLoaded || state.loading) {
         return (
             <div className='min-h-screen bg-gray-100 flex items-center justify-center'>
                 <div className='text-center flex flex-col items-center gap-4'>
@@ -52,6 +99,7 @@ function AppContent() {
 
     return (
         <div className='h-screen bg-gray-100 flex flex-col overflow-hidden'>
+            <UrlSeasonSync />
             <ViewSyncer />
             <Header />
 
@@ -125,4 +173,3 @@ function AppContent() {
 export default function App() {
     return <AppContent />;
 }
-

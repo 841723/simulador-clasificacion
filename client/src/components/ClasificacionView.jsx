@@ -10,19 +10,20 @@ import { calculateProjectedStandings } from '../utils/standings';
 import { computeCurrentJornada } from '../utils/navigation';
 import TeamLogo from './TeamLogo';
 
-// ── Zone definitions ───────────────────────────────────────────────────────────
-const ZONES = [
-  { key: 'ascenso',  label: 'Ascenso directo', color: 'bg-emerald-500', textColor: 'text-emerald-600' },
-  { key: 'playoff',  label: 'Playoff',          color: 'bg-blue-400',    textColor: 'text-blue-600'    },
-  { key: 'mid',      label: 'Permanencia',      color: 'bg-gray-300',    textColor: 'text-gray-500'    },
-  { key: 'descenso', label: 'Descenso',         color: 'bg-rose-400',    textColor: 'text-rose-600'    },
+// ── Default zone definitions (fallback if DB doesn't return zones yet) ─────────
+const DEFAULT_ZONES = [
+  { key: 'ascenso',  label: 'Ascenso directo', color: 'bg-emerald-500', textColor: 'text-emerald-600', borderColor: 'border-emerald-500', minPos: 1,  maxPos: 2  },
+  { key: 'playoff',  label: 'Playoff',          color: 'bg-blue-400',    textColor: 'text-blue-600',    borderColor: 'border-blue-400',    minPos: 3,  maxPos: 6  },
+  { key: 'mid',      label: 'Permanencia',      color: 'bg-gray-300',    textColor: 'text-gray-500',    borderColor: 'border-transparent', minPos: 7,  maxPos: 18 },
+  { key: 'descenso', label: 'Descenso',         color: 'bg-rose-400',    textColor: 'text-rose-600',    borderColor: 'border-rose-400',    minPos: 19, maxPos: null },
 ];
 
-function getZoneBorder(position) {
-  if (position <= 2) return 'border-l-4 border-emerald-500';
-  if (position <= 6) return 'border-l-4 border-blue-400';
-  if (position >= 19) return 'border-l-4 border-rose-400';
-  return 'border-l-4 border-transparent';
+function getZoneBorder(position, zones) {
+  const z = zones.find(
+    (z) => (z.minPos == null || position >= z.minPos) && (z.maxPos == null || position <= z.maxPos),
+  );
+  if (!z || z.borderColor === 'border-transparent') return 'border-l-4 border-transparent';
+  return `border-l-4 ${z.borderColor}`;
 }
 
 // ── Form dots ──────────────────────────────────────────────────────────────────
@@ -53,10 +54,10 @@ function FormDot({ result, isLocked, jornada, opponent, isHome, homeGoals, awayG
 }
 
 // ── Zone probability display (text only, no bar) ───────────────────────────────
-function ZoneProbDisplay({ probs }) {
+function ZoneProbDisplay({ probs, zones }) {
   if (!probs) return <span className="text-gray-300 text-xs">—</span>;
 
-  const formatted = ZONES.map(({ key, textColor }) => {
+  const formatted = zones.map(({ key, textColor }) => {
     const pct = probs[key] || 0;
     let label = null;
     if (pct === 0) {
@@ -83,7 +84,7 @@ function ZoneProbDisplay({ probs }) {
 }
 
 // ── Full Standings Table ───────────────────────────────────────────────────────
-function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selectedTeam, onTeamClick }) {
+function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selectedTeam, onTeamClick, zones }) {
   return (
     <div className="overflow-auto rounded-xl shadow border border-gray-200">
       <table className="w-full text-xs border-collapse">
@@ -103,7 +104,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
             <th className="px-2 py-2 text-center min-w-24">
               <div>Probabilidades</div>
               <div className="flex gap-1.5 justify-center font-normal text-gray-400 mt-0.5">
-                {ZONES.map(z => (
+                {zones.map(z => (
                   <span key={z.key} className="text-xs">{z.label.split(' ')[0]}</span>
                 ))}
               </div>
@@ -121,7 +122,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
               <tr
                 key={row.team.name}
                 onClick={() => onTeamClick(isSelected ? null : row.team.name)}
-                className={`cursor-pointer transition-colors ${getZoneBorder(row.position)} ${
+                className={`cursor-pointer transition-colors ${getZoneBorder(row.position, zones)} ${
                   isSelected
                     ? 'bg-blue-50'
                     : 'hover:bg-gray-50 odd:bg-white even:bg-gray-50/60'
@@ -159,7 +160,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
                   </div>
                 </td>
                 <td className="px-2 py-2">
-                  <ZoneProbDisplay probs={probs} />
+                  <ZoneProbDisplay probs={probs} zones={zones} />
                 </td>
               </tr>
             );
@@ -169,7 +170,7 @@ function FullStandingsTable({ standings, zoneProbabilities, last5ByTeam, selecte
 
       {/* Legend */}
       <div className="px-3 py-2 bg-gray-50 border-t border-gray-200 flex gap-4 flex-wrap items-center">
-        {ZONES.map((z) => (
+        {zones.map((z) => (
           <div key={z.key} className="flex items-center gap-1.5 text-xs text-gray-500">
             <span className={`w-2.5 h-2.5 rounded-sm ${z.color}`} />
             {z.label}
@@ -425,7 +426,7 @@ function JornadaSelector({ jornadas, effectiveEvalJornada, onChange }) {
 
 // ── Main ClasificacionView ─────────────────────────────────────────────────────
 export default function ClasificacionView() {
-  const { state, JORNADAS, leagueSlug, seasonYear } = useSimulation();
+  const { state, JORNADAS, leagueSlug, seasonYear, currentZones } = useSimulation();
   const [selectedTeam, setSelectedTeam] = useState(null);
   const params = useParams();
   const navigate = useNavigate();
@@ -515,8 +516,9 @@ export default function ClasificacionView() {
       state.scores,
       state.results,
       500,
+      currentZones,
     );
-  }, [matchesFromX1, standingsAtX, effectivePronosticos, state.scores, state.results]);
+  }, [matchesFromX1, standingsAtX, effectivePronosticos, state.scores, state.results, currentZones]);
 
   // Last 5 results per team (locked results up to X only)
   const last5ByTeam = useMemo(
@@ -600,6 +602,7 @@ export default function ClasificacionView() {
               last5ByTeam={last5ByTeam}
               selectedTeam={selectedTeam}
               onTeamClick={setSelectedTeam}
+              zones={currentZones.length > 0 ? currentZones : DEFAULT_ZONES}
             />
           )}
         </div>
