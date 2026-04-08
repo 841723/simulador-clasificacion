@@ -329,15 +329,21 @@ export default function JornadaView() {
                             state.lockedMatchIds,
                         );
                         const modified = isModified(match.id, state);
-                        // For locked matches, determine winning team name
+
+                        // Determine the current result ('1'|'X'|'2') for team highlighting
+                        const currentResult = state.results[match.id];
+
+                        // For locked (played) matches – derive winner from actual score string
                         const scoreStr = locked
                             ? state.lockedMatchIds[match.id]
                             : null;
-                        const winnerResult = scoreStr
-                            ? parseResultado(scoreStr)
-                            : null;
-                        const homeWins = winnerResult === "1";
-                        const awayWins = winnerResult === "2";
+                        const lockedResult = scoreStr ? parseResultado(scoreStr) : null;
+
+                        // Which side is winning the current forecast (or actual result for locked)
+                        const effectiveResult = locked ? lockedResult : currentResult;
+                        const homeWins = effectiveResult === "1";
+                        const awayWins = effectiveResult === "2";
+                        const isDraw   = effectiveResult === "X";
 
                         return (
                             <div
@@ -355,11 +361,11 @@ export default function JornadaView() {
                                     <div className='flex items-center gap-2 justify-end w-full'>
                                         <span
                                             className={`font-semibold text-sm truncate ${
-                                                locked
-                                                    ? homeWins
-                                                        ? "text-gray-900 font-black"
-                                                        : "text-gray-500"
-                                                    : "text-gray-800"
+                                                homeWins
+                                                    ? "text-gray-900 font-black"
+                                                    : isDraw
+                                                      ? "text-gray-700"
+                                                      : "text-gray-400"
                                             }`}
                                         >
                                             {match.homeTeam}
@@ -385,11 +391,11 @@ export default function JornadaView() {
                                         />
                                         <span
                                             className={`font-semibold text-sm truncate ${
-                                                locked
-                                                    ? awayWins
-                                                        ? "text-gray-900 font-black"
-                                                        : "text-gray-500"
-                                                    : "text-gray-800"
+                                                awayWins
+                                                    ? "text-gray-900 font-black"
+                                                    : isDraw
+                                                      ? "text-gray-700"
+                                                      : "text-gray-400"
                                             }`}
                                         >
                                             {match.awayTeam}
