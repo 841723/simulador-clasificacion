@@ -162,7 +162,7 @@ export function ResultSelector({ match }) {
 }
 
 export default function JornadaView() {
-    const { state, dispatch, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
+    const { state, dispatch, JORNADAS, leagueSlug, seasonYear } = useSimulation();
     const params = useParams();
     const navigate = useNavigate();
 
@@ -172,13 +172,13 @@ export default function JornadaView() {
 
     // On mount without URL jornada, redirect to canonical URL
     useEffect(() => {
-        if (!params.jornada && leagueExternalId && seasonExternalId && state.currentJornada) {
+        if (!params.jornada && leagueSlug && seasonYear && state.currentJornada) {
             navigate(
-                `/jornadas/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`,
+                `/jornadas/${leagueSlug}/${seasonYear}/${state.currentJornada}`,
                 { replace: true },
             );
         }
-    }, [params.jornada, leagueExternalId, seasonExternalId, state.currentJornada, navigate]);
+    }, [params.jornada, leagueSlug, seasonYear, state.currentJornada, navigate]);
 
     // Sync URL jornada back into context so other views that read currentJornada stay in sync
     useEffect(() => {
@@ -188,8 +188,8 @@ export default function JornadaView() {
     }, [urlJornada, state.currentJornada, dispatch]);
 
     const handleJornadaChange = (j) => {
-        if (leagueExternalId && seasonExternalId) {
-            navigate(`/jornadas/${leagueExternalId}/${seasonExternalId}/${j}`);
+        if (leagueSlug && seasonYear) {
+            navigate(`/jornadas/${leagueSlug}/${seasonYear}/${j}`);
         } else {
             dispatch({ type: 'SET_JORNADA', payload: j });
         }
@@ -206,18 +206,23 @@ export default function JornadaView() {
                 <label htmlFor="jornada-select" className="text-sm font-semibold text-gray-700 shrink-0">
                     Jornada:
                 </label>
-                <select
-                    id="jornada-select"
-                    value={jornada}
-                    onChange={(e) => handleJornadaChange(parseInt(e.target.value, 10))}
-                    className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
-                >
-                    {JORNADAS.map((j) => (
-                        <option key={j} value={j}>
-                            Jornada {j}
-                        </option>
-                    ))}
-                </select>
+                <div className="relative inline-block">
+                    <select
+                        id="jornada-select"
+                        className="appearance-none bg-white border-2 border-blue-200 text-gray-700 font-semibold rounded-xl pl-4 pr-10 py-2 text-sm shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-500 cursor-pointer transition-all"
+                        value={jornada}
+                        onChange={(e) => handleJornadaChange(parseInt(e.target.value, 10))}
+                    >
+                        {JORNADAS.map((j) => (
+                            <option key={j} value={j}>Jornada {j}</option>
+                        ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </div>
+                </div>
             </div>
 
             {/* Match list */}

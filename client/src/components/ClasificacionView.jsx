@@ -390,23 +390,30 @@ function MatchCalendar({ allMatches, pronosticos, lockedMatchIds, results, selec
 // ── Jornada selector (dropdown) ────────────────────────────────────────────────
 function JornadaSelector({ jornadas, effectiveEvalJornada, onChange }) {
   return (
-    <select
-      value={effectiveEvalJornada}
-      onChange={(e) => onChange(parseInt(e.target.value, 10))}
-      className="border-2 border-blue-300 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-800 bg-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors cursor-pointer"
-    >
-      {jornadas.map((j) => (
-        <option key={j} value={j}>
-          Jornada {j}
-        </option>
-      ))}
-    </select>
+    <div className="relative inline-block">
+      <select
+        className="appearance-none bg-white border-2 border-blue-200 text-gray-700 font-semibold rounded-xl pl-4 pr-10 py-2 text-sm shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-500 cursor-pointer transition-all"
+        value={effectiveEvalJornada}
+        onChange={(e) => onChange(parseInt(e.target.value, 10))}
+      >
+        {jornadas.map((j) => (
+          <option key={j} value={j}>
+            Jornada {j}
+          </option>
+        ))}
+      </select>
+      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+    </div>
   );
 }
 
 // ── Main ClasificacionView ─────────────────────────────────────────────────────
 export default function ClasificacionView() {
-  const { state, JORNADAS, leagueExternalId, seasonExternalId, selectedProbSource, setProbSource, probSources } = useSimulation();
+  const { state, JORNADAS, leagueSlug, seasonYear, selectedProbSource, setProbSource, probSources } = useSimulation();
   const [selectedTeam, setSelectedTeam] = useState(null);
   const params = useParams();
   const navigate = useNavigate();
@@ -417,94 +424,114 @@ export default function ClasificacionView() {
     [state.allMatches],
   );
 
-  // evalJornada: from URL param if provided and valid, else auto jornada
+  // selectedJornada: from URL param if provided and valid, else auto jornada
   const urlJornada = params.jornada ? parseInt(params.jornada, 10) : null;
-  const effectiveEvalJornada = useMemo(() => {
+  const selectedJornada = useMemo(() => {
     if (urlJornada && !isNaN(urlJornada) && urlJornada >= 1 && urlJornada <= 42) return urlJornada;
     return autoJornada ?? (JORNADAS[JORNADAS.length - 1] ?? 42);
   }, [urlJornada, autoJornada, JORNADAS]);
 
   // When auto jornada is computed and no URL jornada is set, redirect to the canonical URL
   useEffect(() => {
-    if (!params.jornada && leagueExternalId && seasonExternalId && autoJornada) {
+    if (!params.jornada && leagueSlug && seasonYear && autoJornada) {
       navigate(
-        `/clasificacion/${leagueExternalId}/${seasonExternalId}/${autoJornada}`,
+        `/clasificacion/${leagueSlug}/${seasonYear}/${autoJornada}`,
         { replace: true },
       );
     }
-  }, [params.jornada, leagueExternalId, seasonExternalId, autoJornada, navigate]);
+  }, [params.jornada, leagueSlug, seasonYear, autoJornada, navigate]);
 
   // When jornada changes, update URL
   const handleJornadaChange = (j) => {
-    if (leagueExternalId && seasonExternalId) {
-      navigate(`/clasificacion/${leagueExternalId}/${seasonExternalId}/${j}`);
+    if (leagueSlug && seasonYear) {
+      navigate(`/clasificacion/${leagueSlug}/${seasonYear}/${j}`);
     }
   };
 
-  // Filter matches to those in the evaluation window
-  const filteredMatches = useMemo(
-    () => state.allMatches.filter((m) => m.jornada <= effectiveEvalJornada),
-    [state.allMatches, effectiveEvalJornada],
+  // Matches up to and including jornada X (for standings calculation)
+  const matchesUpToX = useMemo(
+    () => state.allMatches.filter((m) => m.jornada <= selectedJornada),
+    [state.allMatches, selectedJornada],
   );
 
-  // Compute projected standings for the selected jornada window
-  const localProjectedStandings = useMemo(() => {
+  // Matches from jornada X+1 onwards (for Monte Carlo)
+  const matchesFromX1 = useMemo(
+    () => state.allMatches.filter((m) => m.jornada > selectedJornada),
+    [state.allMatches, selectedJornada],
+  );
+
+  // Only locked results/scores for matches with jornada <= X
+  const { lockedUpToX, lockedScoresUpToX } = useMemo(() => {
+    const lockedUpToX = {};
+    const lockedScoresUpToX = {};
+    for (const [id, result] of Object.entries(state.lockedMatchIds)) {
+      const match = state.allMatches.find((m) => String(m.id) === String(id));
+      if (match && match.jornada <= selectedJornada) {
+        lockedUpToX[id] = result;
+        const parts = result.split('-');
+        lockedScoresUpToX[id] = { home: parseInt(parts[0], 10), away: parseInt(parts[1], 10) };
+      }
+    }
+    return { lockedUpToX, lockedScoresUpToX };
+  }, [state.lockedMatchIds, state.allMatches, selectedJornada]);
+
+  // Standings at jornada X: only locked results up to X (actual results)
+  const standingsAtX = useMemo(() => {
     if (state.baseStandings.length === 0) return [];
     return calculateProjectedStandings(
       state.baseStandings,
-      filteredMatches,
-      state.results,
-      state.lockedMatchIds,
-      state.scores,
+      matchesUpToX,
+      lockedUpToX,
+      lockedUpToX,
+      lockedScoresUpToX,
     );
-  }, [state.baseStandings, filteredMatches, state.results, state.lockedMatchIds, state.scores]);
+  }, [state.baseStandings, matchesUpToX, lockedUpToX, lockedScoresUpToX]);
 
-  // Zone probabilities via Monte Carlo for the filtered window
+  // Pronosticos for future matches (jornada > X)
   const effectivePronosticos = useMemo(() => {
     if (selectedProbSource === 'equal') {
       const equalProno = { local: 1 / 3, empate: 1 / 3, visitante: 1 / 3 };
       const result = {};
-      for (const m of filteredMatches) {
-        if (!state.lockedMatchIds[m.id]) result[m.id] = equalProno;
-      }
+      for (const m of matchesFromX1) result[m.id] = equalProno;
       return result;
     }
     return state.pronosticos;
-  }, [selectedProbSource, filteredMatches, state.lockedMatchIds, state.pronosticos]);
+  }, [selectedProbSource, matchesFromX1, state.pronosticos]);
 
+  // Zone probabilities via Monte Carlo for jornada X+1 onwards
   const zoneProbabilities = useMemo(() => {
-    if (state.baseStandings.length === 0) return {};
+    if (standingsAtX.length === 0) return {};
     return runMonteCarloSimulations(
-      filteredMatches,
-      state.baseStandings,
-      state.lockedMatchIds,
+      matchesFromX1,
+      standingsAtX,
+      {},  // no locked matches in the future simulation window
       effectivePronosticos,
       state.scores,
       state.results,
       500,
     );
-  }, [filteredMatches, state.baseStandings, state.lockedMatchIds, effectivePronosticos, state.scores, state.results]);
+  }, [matchesFromX1, standingsAtX, effectivePronosticos, state.scores, state.results]);
 
-  // Last 5 results per team (use filtered matches)
+  // Last 5 results per team (locked results up to X only)
   const last5ByTeam = useMemo(
-    () => getLast5Matches(filteredMatches, state.results, state.lockedMatchIds),
-    [filteredMatches, state.results, state.lockedMatchIds],
+    () => getLast5Matches(matchesUpToX, lockedUpToX, lockedUpToX),
+    [matchesUpToX, lockedUpToX],
   );
 
-  // H2H data when a team is selected
+  // H2H data when a team is selected (based on standings at X)
   const h2hData = useMemo(() => {
     if (!selectedTeam) return null;
     return calculateH2H(
       selectedTeam,
-      filteredMatches,
-      state.results,
-      state.scores,
-      state.lockedMatchIds,
-      localProjectedStandings,
+      matchesUpToX,
+      lockedUpToX,
+      lockedScoresUpToX,
+      lockedUpToX,
+      standingsAtX,
     );
-  }, [selectedTeam, filteredMatches, state.results, state.scores, state.lockedMatchIds, localProjectedStandings]);
+  }, [selectedTeam, matchesUpToX, lockedUpToX, lockedScoresUpToX, standingsAtX]);
 
-  if (localProjectedStandings.length === 0) {
+  if (standingsAtX.length === 0) {
     return (
       <div className="flex items-center justify-center py-20 text-gray-400">
         Calculando clasificación…
@@ -521,14 +548,14 @@ export default function ClasificacionView() {
         {/* Jornada dropdown */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide shrink-0">
-            Hasta jornada:
+            Jornada:
           </span>
           <JornadaSelector
             jornadas={JORNADAS}
-            effectiveEvalJornada={effectiveEvalJornada}
+            effectiveEvalJornada={selectedJornada}
             onChange={handleJornadaChange}
           />
-          {autoJornada && effectiveEvalJornada !== autoJornada && (
+          {autoJornada && selectedJornada !== autoJornada && (
             <button
               onClick={() => handleJornadaChange(autoJornada)}
               className="text-xs text-blue-500 hover:text-blue-700 underline"
@@ -564,8 +591,13 @@ export default function ClasificacionView() {
         <div className="flex-1 overflow-auto">
           <div className="mb-3">
             <h2 className="text-base font-bold text-gray-800">
-              {selectedTeam && h2hData ? null : 'Clasificación Completa'}
+              {selectedTeam && h2hData ? null : `Clasificación - Jornada ${selectedJornada}`}
             </h2>
+            {!selectedTeam && matchesFromX1.length > 0 && (
+              <p className="text-xs text-gray-400 mt-0.5">
+                Probabilidades Monte Carlo desde J{selectedJornada + 1}
+              </p>
+            )}
           </div>
 
           {selectedTeam && h2hData ? (
@@ -576,7 +608,7 @@ export default function ClasificacionView() {
             />
           ) : (
             <FullStandingsTable
-              standings={localProjectedStandings}
+              standings={standingsAtX}
               zoneProbabilities={zoneProbabilities}
               last5ByTeam={last5ByTeam}
               selectedTeam={selectedTeam}
@@ -585,10 +617,10 @@ export default function ClasificacionView() {
           )}
         </div>
 
-        {/* Right: calendar */}
+        {/* Right: calendar (future matches from X+1) */}
         <div className="w-72 shrink-0 overflow-auto">
           <MatchCalendar
-            allMatches={filteredMatches}
+            allMatches={matchesFromX1}
             pronosticos={effectivePronosticos}
             lockedMatchIds={state.lockedMatchIds}
             results={state.results}

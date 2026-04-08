@@ -3,17 +3,17 @@ import { useSimulation } from '../context/SimulationContext';
 import { Logo } from "./Logo.jsx";
 
 export default function Header() {
-  const { state, leagueExternalId, seasonExternalId } = useSimulation();
+  const { state, leagueSlug, seasonYear } = useSimulation();
 
-  // Build canonical tab paths once external IDs are known
-  const jornadaPath = leagueExternalId && seasonExternalId && state.currentJornada
-    ? `/jornadas/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`
+  // Build canonical tab paths once slug/year are known
+  const jornadaPath = leagueSlug && seasonYear && state.currentJornada
+    ? `/jornadas/${leagueSlug}/${seasonYear}/${state.currentJornada}`
     : '/jornadas';
-  const equiposPath = leagueExternalId && seasonExternalId
-    ? `/equipos/${leagueExternalId}/${seasonExternalId}`
+  const equiposPath = leagueSlug && seasonYear
+    ? `/equipos/${leagueSlug}/${seasonYear}`
     : '/equipos';
-  const clasificacionPath = leagueExternalId && seasonExternalId && state.currentJornada
-    ? `/clasificacion/${leagueExternalId}/${seasonExternalId}/${state.currentJornada}`
+  const clasificacionPath = leagueSlug && seasonYear && state.currentJornada
+    ? `/clasificacion/${leagueSlug}/${seasonYear}/${state.currentJornada}`
     : '/clasificacion';
 
   const TABS = [

@@ -69,7 +69,7 @@ function AppContent() {
                         </main>
                     </>
                 } />
-                <Route path="/jornadas/:leagueExtId/:seasonExtId/:jornada" element={
+                <Route path="/jornadas/:leagueSlug/:seasonYear/:jornada" element={
                     <>
                         <SimulationManager />
                         <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
@@ -91,7 +91,7 @@ function AppContent() {
                         </main>
                     </>
                 } />
-                <Route path="/equipos/:leagueExtId/:seasonExtId" element={
+                <Route path="/equipos/:leagueSlug/:seasonYear" element={
                     <>
                         <SimulationManager />
                         <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
@@ -109,7 +109,7 @@ function AppContent() {
                         <ClasificacionView />
                     </main>
                 } />
-                <Route path="/clasificacion/:leagueExtId/:seasonExtId/:jornada" element={
+                <Route path="/clasificacion/:leagueSlug/:seasonYear/:jornada" element={
                     <main className='flex-1 overflow-hidden'>
                         <ClasificacionView />
                     </main>

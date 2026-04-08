@@ -78,10 +78,13 @@ cd sofascore_scrapper
 pip install playwright psycopg
 playwright install chromium
 
-# Scraping incremental (detecta automáticamente desde dónde continuar)
+# First run: seed teams from standings API, then scrape all jornadas
+python sofascore.py --init-teams
+
+# Subsequent runs: incremental (auto-detects first incomplete jornada)
 python sofascore.py
 
-# Con opciones explícitas
+# With explicit options
 python sofascore.py --from-jornada 30 --to-jornada 42
 ```
 

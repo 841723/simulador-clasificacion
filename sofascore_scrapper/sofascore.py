@@ -4,7 +4,7 @@ sofascore.py - Incremental SofaScore scraper for LaLiga 2
 Fetches match data and betting odds, then upserts into the PostgreSQL database.
 
 Usage:
-    python sofascore.py [--from-jornada N] [--to-jornada N] [--season N] [--league N]
+    python sofascore.py [--from-jornada N] [--to-jornada N] [--season N] [--league N] [--init-teams]
 
 Environment variables (with defaults):
     DB_HOST     localhost
@@ -75,6 +75,18 @@ def fetch_match_odds(match_id, browser):
         page.close()
 
 
+def fetch_standings(league_ext_id, season_ext_id, browser):
+    """Fetch the total standings for a season from SofaScore."""
+    url = f"https://www.sofascore.com/api/v1/unique-tournament/{league_ext_id}/season/{season_ext_id}/standings/total"
+    page = browser.new_page()
+    try:
+        page.goto(url)
+        content = page.content()
+        return _parse_pre(content)
+    finally:
+        page.close()
+
+
 def _parse_pre(html_content):
     """Extract JSON from the <pre> tag in a SofaScore API page."""
     try:
@@ -116,32 +128,48 @@ def compute_first_incomplete_jornada(conn, season_id):
     # All jornadas complete → return last jornada
     return rows[-1][0]
 
+
+def has_teams_for_season(conn, season_id):
+    """Returns True if any teams are registered for this season."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT 1 FROM season_teams WHERE season_id = %s LIMIT 1",
+            (season_id,),
+        )
+        return cur.fetchone() is not None
+
 # ── DB upsert helpers ──────────────────────────────────────────────────────────
 
-def ensure_league(conn, league_ext_id):
+def ensure_league(conn, ext_id, name='LaLiga 2', slug='laliga2', country='Spain'):
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO leagues (name, slug, country, external_id)
-            VALUES ('LaLiga 2', 'laliga2', 'Spain', %s)
-            ON CONFLICT (slug) DO UPDATE SET external_id = EXCLUDED.external_id
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (slug) DO UPDATE
+              SET name        = EXCLUDED.name,
+                  external_id = EXCLUDED.external_id
             RETURNING id
             """,
-            (league_ext_id,),
+            (name, slug, country, ext_id),
         )
         return cur.fetchone()[0]
 
 
-def ensure_season(conn, league_id, season_ext_id):
+def ensure_season(conn, league_id, ext_id, year='25/26', name=None):
+    if name is None:
+        name = f'LaLiga 2 {year}'
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO seasons (league_id, year, name, external_id)
-            VALUES (%s, '25/26', 'LaLiga 2 25/26', %s)
-            ON CONFLICT (league_id, year) DO UPDATE SET external_id = EXCLUDED.external_id
+            VALUES (%s, %s, %s, %s)
+            ON CONFLICT (league_id, year) DO UPDATE
+              SET name        = EXCLUDED.name,
+                  external_id = EXCLUDED.external_id
             RETURNING id
             """,
-            (league_id, season_ext_id),
+            (league_id, year, name, ext_id),
         )
         return cur.fetchone()[0]
 
@@ -186,6 +214,46 @@ def upsert_team(conn, season_id, team_data):
             (season_id, team_id),
         )
     return team_id
+
+
+def upsert_base_standings(conn, season_id, team_id):
+    """Insert a zero-row for this team in base_standings (no-op if already exists).
+    position=0 means 'not yet assigned'; the front-end calculates from scratch.
+    """
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO base_standings
+              (season_id, team_id, position, played, wins, draws, losses, goals_for, goals_against, points)
+            VALUES (%s, %s, 0, 0, 0, 0, 0, 0, 0, 0)
+            ON CONFLICT (season_id, team_id) DO NOTHING
+            """,
+            (season_id, team_id),
+        )
+
+
+def seed_teams_from_standings(conn, season_id, standings_data, league_ext_id):
+    """Seed teams from the SofaScore standings API response."""
+    standings_list = standings_data.get("standings", [])
+    if not standings_list:
+        print("  No standings data found.")
+        return
+
+    rows = standings_list[0].get("rows", [])
+    print(f"  Seeding {len(rows)} teams from standings...")
+    for row in rows:
+        team = row.get("team", {})
+        image_url = f"https://img.sofascore.com/api/v1/team/{team['id']}/image"
+        team_id = upsert_team(conn, season_id, {
+            "name": team.get("name"),
+            "slug": team.get("slug"),
+            "imageUrl": image_url,
+            "id": team.get("id"),
+        })
+        upsert_base_standings(conn, season_id, team_id)
+        print(f"    ✓ {team.get('name')} (slug: {team.get('slug')})")
+    conn.commit()
+    print(f"  Teams seeded successfully.")
 
 
 def upsert_match(conn, season_id, event, home_team_id, away_team_id, jornada):
@@ -270,17 +338,19 @@ def upsert_odds(conn, match_id, odds_source_id, prob_home, prob_draw, prob_away)
 
 # ── Main scraping logic ────────────────────────────────────────────────────────
 
-def scrape_jornada(jornada, season_id, odds_source_id, conn, browser):
+def scrape_jornada(jornada, season_id, odds_source_id, league_ext_id, season_ext_id, conn, browser):
     """Scrape a single jornada: upsert teams, matches, and odds."""
     print(f"\n  Jornada {jornada}:")
 
-    data = fetch_jornada(jornada, DEFAULT_LEAGUE_EXT_ID, DEFAULT_SEASON_EXT_ID, browser)
+    data = fetch_jornada(jornada, league_ext_id, season_ext_id, browser)
     events = data.get("events", [])
     print(f"    {len(events)} partidos encontrados")
 
     for event in events:
         home_id = upsert_team(conn, season_id, event.get("homeTeam", {}))
         away_id = upsert_team(conn, season_id, event.get("awayTeam", {}))
+        upsert_base_standings(conn, season_id, home_id)
+        upsert_base_standings(conn, season_id, away_id)
         upsert_match(conn, season_id, event, home_id, away_id, jornada)
 
         match_id = event["id"]
@@ -331,6 +401,8 @@ def main():
                         help=f"SofaScore season id (default: {DEFAULT_SEASON_EXT_ID})")
     parser.add_argument("--league", type=int, default=DEFAULT_LEAGUE_EXT_ID,
                         help=f"SofaScore league id (default: {DEFAULT_LEAGUE_EXT_ID})")
+    parser.add_argument("--init-teams", action="store_true",
+                        help="Seed teams from the standings API before scraping matches")
     args = parser.parse_args()
 
     print("Connecting to database...")
@@ -342,20 +414,26 @@ def main():
         odds_source_id = ensure_odds_source(conn)
         conn.commit()
 
-        from_jornada = args.from_jornada
-        if from_jornada is None:
-            from_jornada = compute_first_incomplete_jornada(conn, season_id)
-            print(f"Auto-detected first incomplete jornada: {from_jornada}")
-
-        to_jornada = args.to_jornada
-        print(f"Scraping jornadas {from_jornada} – {to_jornada}...")
-
         with sync_playwright() as playwright:
             browser = playwright.chromium.launch(headless=True)
             try:
+                # Seed teams from standings if requested or if no teams exist yet (first run)
+                if args.init_teams or not has_teams_for_season(conn, season_id):
+                    print("Fetching teams from standings API...")
+                    standings_data = fetch_standings(args.league, args.season, browser)
+                    seed_teams_from_standings(conn, season_id, standings_data, args.league)
+
+                from_jornada = args.from_jornada
+                if from_jornada is None:
+                    from_jornada = compute_first_incomplete_jornada(conn, season_id)
+                    print(f"Auto-detected first incomplete jornada: {from_jornada}")
+
+                to_jornada = args.to_jornada
+                print(f"Scraping jornadas {from_jornada} – {to_jornada}...")
+
                 for jornada in range(from_jornada, to_jornada + 1):
                     try:
-                        scrape_jornada(jornada, season_id, odds_source_id, conn, browser)
+                        scrape_jornada(jornada, season_id, odds_source_id, args.league, args.season, conn, browser)
                     except Exception as exc:  # noqa: BLE001
                         print(f"  ERROR en jornada {jornada}: {exc}")
                         conn.rollback()
@@ -368,4 +446,3 @@ def main():
 
 
 if __name__ == "__main__":
-    main()

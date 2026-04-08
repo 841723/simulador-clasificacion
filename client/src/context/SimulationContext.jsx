@@ -17,8 +17,10 @@ const initialState = {
   loading: true,
   error: null,
   seasonId: SEASON_ID,
-  leagueExternalId: null,   // SofaScore uniqueTournament id
-  seasonExternalId: null,   // SofaScore season id
+  leagueSlug: null,         // leagues.slug (e.g. "laliga2")
+  seasonYear: null,         // seasons.year with "/" → "-" (e.g. "25-26")
+  leagueExternalId: null,   // SofaScore uniqueTournament id (kept for reference)
+  seasonExternalId: null,   // SofaScore season id (kept for reference)
   baseStandings: [],          // raw rows from API
   allMatches: [],             // flat list of all matches
   results: {},                // matchId → "1" | "X" | "2"
@@ -38,7 +40,7 @@ const initialState = {
 function reducer(state, action) {
   switch (action.type) {
     case 'LOAD_DATA': {
-      const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId } = action.payload;
+      const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear } = action.payload;
       const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
       const scores = buildInitialScores(allMatches, results, lockedMatchIds);
       const jornadas = [...new Set(allMatches.map((m) => m.jornada))].sort((a, b) => a - b);
@@ -53,6 +55,8 @@ function reducer(state, action) {
         originalScores: { ...scores },
         lockedMatchIds,
         pronosticos,
+        leagueSlug: leagueSlug ?? state.leagueSlug,
+        seasonYear: seasonYear ?? state.seasonYear,
         leagueExternalId: leagueExternalId ?? state.leagueExternalId,
         seasonExternalId: seasonExternalId ?? state.seasonExternalId,
         currentJornada: computeCurrentJornada(allMatches, jornadas[jornadas.length - 1] ?? 42),
@@ -217,10 +221,12 @@ export function SimulationProvider({ children }) {
         const teamsData = teamsRes.ok ? await teamsRes.json() : [];
         const seasonsData = seasonsRes.ok ? await seasonsRes.json() : [];
 
-        // Extract external IDs for the current season
+        // Extract external IDs and slug/year for the current season
         const currentSeasonInfo = seasonsData.find((s) => String(s.id) === String(SEASON_ID));
         const leagueExternalId = currentSeasonInfo?.leagueExternalId ?? null;
         const seasonExternalId = currentSeasonInfo?.seasonExternalId ?? null;
+        const leagueSlug = currentSeasonInfo?.leagueSlug ?? null;
+        const seasonYear = currentSeasonInfo?.year ? currentSeasonInfo.year.replace('/', '-') : null;
 
         // Build team images map: slug → imageUrl
         const images = {};
@@ -268,7 +274,7 @@ export function SimulationProvider({ children }) {
 
         dispatch({
           type: 'LOAD_DATA',
-          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId },
+          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear },
         });
       } catch (err) {
         dispatch({ type: 'LOAD_ERROR', payload: err.message });
@@ -345,6 +351,8 @@ export function SimulationProvider({ children }) {
     loadSimulationFromAPI,
     deleteSimulationFromAPI,
     SEASON_ID,
+    leagueSlug: state.leagueSlug,
+    seasonYear: state.seasonYear,
     leagueExternalId: state.leagueExternalId,
     seasonExternalId: state.seasonExternalId,
     probSources,

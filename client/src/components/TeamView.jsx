@@ -97,16 +97,16 @@ function MatchCell({ match, teamName }) {
 }
 
 export default function TeamView() {
-    const { state, dispatch, projectedStandings, JORNADAS, leagueExternalId, seasonExternalId } = useSimulation();
+    const { state, dispatch, projectedStandings, JORNADAS, leagueSlug, seasonYear } = useSimulation();
     const params = useParams();
     const navigate = useNavigate();
 
     // On mount without URL params, redirect to canonical URL
     useEffect(() => {
-        if (!params.leagueExtId && leagueExternalId && seasonExternalId) {
-            navigate(`/equipos/${leagueExternalId}/${seasonExternalId}`, { replace: true });
+        if (!params.leagueSlug && leagueSlug && seasonYear) {
+            navigate(`/equipos/${leagueSlug}/${seasonYear}`, { replace: true });
         }
-    }, [params.leagueExtId, leagueExternalId, seasonExternalId, navigate]);
+    }, [params.leagueSlug, leagueSlug, seasonYear, navigate]);
 
     const nowTs = Math.floor(Date.now() / 1000);
 
