@@ -1,5 +1,5 @@
 """
-sofascore.py - Incremental SofaScore scraper for LaLiga 2
+sofascore.py - Incremental SofaScore scraper
 
 Fetches match data and betting odds, then upserts into the PostgreSQL database.
 
@@ -23,9 +23,21 @@ import psycopg
 from playwright.sync_api import sync_playwright
 
 # ── Constants ──────────────────────────────────────────────────────────────────
-DEFAULT_LEAGUE_EXT_ID = 54
-DEFAULT_SEASON_EXT_ID = 77558
-TOTAL_JORNADAS = 42
+# DEFAULT_LEAGUE_EXT_ID = 54
+# DEFAULT_SEASON_EXT_ID = 77558
+# TOTAL_JORNADAS = 42
+# DEFAULT_SEASON_YEAR = '25/26'
+# DEFAULT_LEAGUE_NAME = 'LaLiga 2'
+# DEFAULT_LEAGUE_SLUG = 'laliga2'
+# DEFAULT_LEAGUE_COUNTRY = 'Spain'
+
+DEFAULT_LEAGUE_EXT_ID = 8
+DEFAULT_SEASON_EXT_ID = 77559
+TOTAL_JORNADAS = 38
+DEFAULT_SEASON_YEAR = '25/26'
+DEFAULT_LEAGUE_NAME = 'LaLiga'
+DEFAULT_LEAGUE_SLUG = 'laliga'
+DEFAULT_LEAGUE_COUNTRY = 'Spain'
 
 # ── DB connection helper ───────────────────────────────────────────────────────
 
@@ -55,6 +67,7 @@ def odds_to_probabilities(fractional_odds):
 
 def fetch_jornada(jornada, league_id, season_id, browser):
     url = f"https://www.sofascore.com/api/v1/unique-tournament/{league_id}/season/{season_id}/events/round/{jornada}"
+    print(f"  Fetching jornada {jornada} from {url}...")
     page = browser.new_page()
     try:
         page.goto(url)
@@ -140,7 +153,7 @@ def has_teams_for_season(conn, season_id):
 
 # ── DB upsert helpers ──────────────────────────────────────────────────────────
 
-def ensure_league(conn, ext_id, name='LaLiga 2', slug='laliga2', country='Spain'):
+def ensure_league(conn, ext_id, name, slug, country):
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -156,9 +169,9 @@ def ensure_league(conn, ext_id, name='LaLiga 2', slug='laliga2', country='Spain'
         return cur.fetchone()[0]
 
 
-def ensure_season(conn, league_id, ext_id, year='25/26', name=None):
+def ensure_season(conn, league_id, ext_id, year=DEFAULT_SEASON_YEAR, name=None):
     if name is None:
-        name = f'LaLiga 2 {year}'
+        name = f'{DEFAULT_LEAGUE_NAME} {year}'
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -392,15 +405,25 @@ def scrape_jornada(jornada, season_id, odds_source_id, league_ext_id, season_ext
 
 
 def main():
-    parser = argparse.ArgumentParser(description="SofaScore scraper for LaLiga 2")
+    parser = argparse.ArgumentParser(description="SofaScore scraper")
     parser.add_argument("--from-jornada", type=int, default=None,
                         help="First jornada to scrape (default: auto-detect first incomplete)")
     parser.add_argument("--to-jornada", type=int, default=TOTAL_JORNADAS,
                         help=f"Last jornada to scrape (default: {TOTAL_JORNADAS})")
-    parser.add_argument("--season", type=int, default=DEFAULT_SEASON_EXT_ID,
+    parser.add_argument("--season-sf", type=int, default=DEFAULT_SEASON_EXT_ID,
                         help=f"SofaScore season id (default: {DEFAULT_SEASON_EXT_ID})")
-    parser.add_argument("--league", type=int, default=DEFAULT_LEAGUE_EXT_ID,
+    parser.add_argument("--league-sf", type=int, default=DEFAULT_LEAGUE_EXT_ID,
                         help=f"SofaScore league id (default: {DEFAULT_LEAGUE_EXT_ID})")
+    parser.add_argument("--season-year", type=str, default=DEFAULT_SEASON_YEAR,
+                        help=f"Season year string for naming (default: '{DEFAULT_SEASON_YEAR}')")
+    parser.add_argument("--league-name", type=str, default=DEFAULT_LEAGUE_NAME,
+                        help=f"Full league name for naming (default: '{DEFAULT_LEAGUE_NAME}')")
+    parser.add_argument("--league-slug", type=str, default=DEFAULT_LEAGUE_SLUG,
+                        help=f"League slug for naming (default: '{DEFAULT_LEAGUE_SLUG}')")
+    parser.add_argument("--league-country", type=str, default=DEFAULT_LEAGUE_COUNTRY,
+                        help=f"League country for naming (default: '{DEFAULT_LEAGUE_COUNTRY}')")
+    parser.add_argument("--jornadas-total", type=int, default=TOTAL_JORNADAS,
+                        help=f"Total number of jornadas in the season (default: {TOTAL_JORNADAS})")
     parser.add_argument("--init-teams", action="store_true",
                         help="Seed teams from the standings API before scraping matches")
     args = parser.parse_args()
@@ -409,8 +432,8 @@ def main():
     conn = get_db_conn()
 
     try:
-        league_id = ensure_league(conn, args.league)
-        season_id = ensure_season(conn, league_id, args.season)
+        league_id = ensure_league(conn, args.league_sf, args.league_name, args.league_slug, args.league_country)
+        season_id = ensure_season(conn, league_id, args.season_sf, args.season_year, f"{args.league_name} {args.season_year}")
         odds_source_id = ensure_odds_source(conn)
         conn.commit()
 
@@ -420,8 +443,8 @@ def main():
                 # Seed teams from standings if requested or if no teams exist yet (first run)
                 if args.init_teams or not has_teams_for_season(conn, season_id):
                     print("Fetching teams from standings API...")
-                    standings_data = fetch_standings(args.league, args.season, browser)
-                    seed_teams_from_standings(conn, season_id, standings_data, args.league)
+                    standings_data = fetch_standings(args.league_sf, args.season_sf, browser)
+                    seed_teams_from_standings(conn, season_id, standings_data, args.league_name)
 
                 from_jornada = args.from_jornada
                 if from_jornada is None:
@@ -433,7 +456,7 @@ def main():
 
                 for jornada in range(from_jornada, to_jornada + 1):
                     try:
-                        scrape_jornada(jornada, season_id, odds_source_id, args.league, args.season, conn, browser)
+                        scrape_jornada(jornada, season_id, odds_source_id, args.league_sf, args.season_sf, conn, browser)
                     except Exception as exc:  # noqa: BLE001
                         print(f"  ERROR en jornada {jornada}: {exc}")
                         conn.rollback()
