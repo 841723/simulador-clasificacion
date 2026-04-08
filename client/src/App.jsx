@@ -105,66 +105,50 @@ function AppContent() {
 
             <Routes>
                 {/* Default redirect to jornadas */}
-                <Route path="/" element={<Navigate to="/jornadas" replace />} />
+                <Route path='/' element={<Navigate to='/jornadas' replace />} />
 
                 {/* Jornadas – bare or with full URL params */}
-                <Route path="/jornadas" element={
-                    <>
-                        <SimulationManager />
-                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
-                            <JornadaView />
-                            <StandingsTable />
-                        </main>
-                    </>
-                } />
-                <Route path="/jornadas/:leagueSlug/:seasonYear/:jornada" element={
-                    <>
-                        <SimulationManager />
-                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
-                            <JornadaView />
-                            <StandingsTable />
-                        </main>
-                    </>
-                } />
+                <Route path='/jornadas/:leagueSlug/:seasonYear/:jornada'
+                    
+                        element={
+                            <>
+                                <SimulationManager />
+                                <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
+                                    <JornadaView />
+                                    <StandingsTable />
+                                </main>
+                            </>
+                        }
+                />
 
                 {/* Equipos – bare or with league/season URL params */}
-                <Route path="/equipos" element={
-                    <>
-                        <SimulationManager />
-                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
-                            <TeamView />
-                            <div className="sticky top-0 self-start">
-                                <StandingsTable />
-                            </div>
-                        </main>
-                    </>
-                } />
-                <Route path="/equipos/:leagueSlug/:seasonYear" element={
-                    <>
-                        <SimulationManager />
-                        <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
-                            <TeamView />
-                            <div className="sticky top-0 self-start">
-                                <StandingsTable />
-                            </div>
-                        </main>
-                    </>
-                } />
+                <Route
+                    path='/equipos/:leagueSlug/:seasonYear'
+                    element={
+                        <>
+                            <SimulationManager />
+                            <main className='grid grid-cols-[3fr_1fr] p-4 relative overflow-auto flex-1'>
+                                <TeamView />
+                                <div className='sticky top-0 self-start'>
+                                    <StandingsTable />
+                                </div>
+                            </main>
+                        </>
+                    }
+                />
 
                 {/* Clasificación – bare or with league/season/jornada URL params */}
-                <Route path="/clasificacion" element={
-                    <main className='flex-1 overflow-hidden'>
-                        <ClasificacionView />
-                    </main>
-                } />
-                <Route path="/clasificacion/:leagueSlug/:seasonYear/:jornada" element={
-                    <main className='flex-1 overflow-hidden'>
-                        <ClasificacionView />
-                    </main>
-                } />
+                <Route
+                    path='/clasificacion/:leagueSlug/:seasonYear/:jornada'
+                    element={
+                        <main className='flex-1 overflow-hidden'>
+                            <ClasificacionView />
+                        </main>
+                    }
+                />
 
                 {/* Catch-all → jornadas */}
-                <Route path="*" element={<Navigate to="/jornadas" replace />} />
+                <Route path='*' element={<Navigate to='/jornadas' replace />} />
             </Routes>
         </div>
     );

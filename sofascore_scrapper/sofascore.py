@@ -256,13 +256,14 @@ def seed_teams_from_standings(conn, season_id, standings_data, league_ext_id):
     print(f"  Seeding {len(rows)} teams from standings...")
     for row in rows:
         team = row.get("team", {})
-        image_url = f"https://img.sofascore.com/api/v1/team/{team['id']}/image"
+        image_url = f"https://img.sofascore.com/api/v1/team/{team.get('id')}/image"
         team_id = upsert_team(conn, season_id, {
             "name": team.get("name"),
             "slug": team.get("slug"),
             "imageUrl": image_url,
             "id": team.get("id"),
         })
+        print(f"    ✓ {team.get('name')}  image {image_url}")
         upsert_base_standings(conn, season_id, team_id)
         print(f"    ✓ {team.get('name')} (slug: {team.get('slug')})")
     conn.commit()
@@ -445,7 +446,7 @@ def main():
                     print("Fetching teams from standings API...")
                     standings_data = fetch_standings(args.league_sf, args.season_sf, browser)
                     seed_teams_from_standings(conn, season_id, standings_data, args.league_sf)
-
+                return
                 from_jornada = args.from_jornada
                 if from_jornada is None:
                     from_jornada = compute_first_incomplete_jornada(conn, season_id)

@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useSimulation } from '../context/SimulationContext';
-import { isMatchLocked, isModified, parseResultado } from '../utils/standings';
-import TeamLogo from './TeamLogo';
+import { useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useSimulation } from "../context/SimulationContext";
+import { isMatchLocked, isModified, parseResultado } from "../utils/standings";
+import TeamLogo from "./TeamLogo";
+import { LeftArrowIcon, RightArrowIcon } from "./Arrow";
 
 const RESULT_OPTIONS = [
     { value: "1", label: "1", title: "Local gana" },
@@ -18,9 +19,9 @@ function getHighestProbResult(pronostico) {
     if (!pronostico) return null;
     const { local, empate, visitante } = pronostico;
     const max = Math.max(local, empate, visitante);
-    if (local === max) return '1';
-    if (visitante === max) return '2';
-    return 'X';
+    if (local === max) return "1";
+    if (visitante === max) return "2";
+    return "X";
 }
 
 /**
@@ -29,9 +30,9 @@ function getHighestProbResult(pronostico) {
  */
 function PronosticoDisplay({ pronostico, highlightResult }) {
     const pills = [
-        { key: '1', value: pronostico.local },
-        { key: 'X', value: pronostico.empate },
-        { key: '2', value: pronostico.visitante },
+        { key: "1", value: pronostico.local },
+        { key: "X", value: pronostico.empate },
+        { key: "2", value: pronostico.visitante },
     ];
     return (
         <div className='flex gap-1 mt-1 justify-center flex-wrap'>
@@ -64,12 +65,14 @@ function PronosticoDisplay({ pronostico, highlightResult }) {
 function GoalInput({ value, onChange, disabled }) {
     return (
         <input
-            type="number"
-            min="0"
+            type='number'
+            min='0'
             value={value}
             disabled={disabled}
-            onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-12 text-center text-xl font-black border-2 border-gray-200 rounded-lg py-1 focus:outline-none focus:border-blue-400 disabled:bg-transparent disabled:border-transparent disabled:text-gray-400 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            onChange={(e) =>
+                onChange(Math.max(0, parseInt(e.target.value) || 0))
+            }
+            className='w-12 text-center text-xl font-black border-2 border-gray-200 rounded-lg py-1 focus:outline-none focus:border-blue-400 disabled:bg-transparent disabled:border-transparent disabled:text-gray-400 bg-white [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
         />
     );
 }
@@ -82,38 +85,57 @@ export function ResultSelector({ match }) {
     // Only show pronostico pills when the match has real odds (probIsFinal)
     const rawPronostico = state.pronosticos[match.id];
     const matchInfo = state.allMatches.find((m) => m.id === match.id);
-    const pronostico = (matchInfo?.probIsFinal && rawPronostico) ? rawPronostico : null;
+    const pronostico =
+        matchInfo?.probIsFinal && rawPronostico ? rawPronostico : null;
 
     const handleGoalChange = (side, val) => {
-        const newHome = side === 'home' ? val : score.home;
-        const newAway = side === 'away' ? val : score.away;
-        dispatch({ type: 'SET_SCORE', payload: { matchId: match.id, home: newHome, away: newAway } });
+        const newHome = side === "home" ? val : score.home;
+        const newAway = side === "away" ? val : score.away;
+        dispatch({
+            type: "SET_SCORE",
+            payload: { matchId: match.id, home: newHome, away: newAway },
+        });
     };
 
     if (locked) {
         const scoreStr = state.lockedMatchIds[match.id];
         // e.g. "1-3" → home=1, away=3
-        const parts = scoreStr.split('-');
+        const parts = scoreStr.split("-");
         const homeGoals = parseInt(parts[0], 10);
         const awayGoals = parseInt(parts[1], 10);
         const winnerResult = parseResultado(scoreStr); // '1' | 'X' | '2'
         // For pronostico highlight: match the actual outcome. Null if draw (don't highlight).
-        const pronosticoHighlight = winnerResult === 'X' ? null : winnerResult;
+        const pronosticoHighlight = winnerResult;
 
         return (
-            <div className="flex flex-col items-center gap-0.5">
+            <div className='flex flex-col items-center gap-0.5'>
                 {/* Score: bold the winner's side */}
-                <div className="flex items-center gap-0.5 font-mono text-2xl tracking-widest text-gray-700">
-                    <span className={homeGoals > awayGoals ? 'font-black text-gray-900' : 'font-normal text-gray-400'}>
+                <div className='flex items-center gap-0.5 font-mono text-2xl tracking-widest text-gray-700'>
+                    <span
+                        className={
+                            homeGoals > awayGoals
+                                ? "font-black text-gray-900"
+                                : "font-normal text-gray-400"
+                        }
+                    >
                         {homeGoals}
                     </span>
-                    <span className="font-normal text-gray-400">-</span>
-                    <span className={awayGoals > homeGoals ? 'font-black text-gray-900' : 'font-normal text-gray-400'}>
+                    <span className='font-normal text-gray-400'>-</span>
+                    <span
+                        className={
+                            awayGoals > homeGoals
+                                ? "font-black text-gray-900"
+                                : "font-normal text-gray-400"
+                        }
+                    >
                         {awayGoals}
                     </span>
                 </div>
                 {pronostico && (
-                    <PronosticoDisplay pronostico={pronostico} highlightResult={pronosticoHighlight} />
+                    <PronosticoDisplay
+                        pronostico={pronostico}
+                        highlightResult={pronosticoHighlight}
+                    />
                 )}
             </div>
         );
@@ -123,27 +145,39 @@ export function ResultSelector({ match }) {
     const pronosticoHighlight = getHighestProbResult(pronostico);
 
     return (
-        <div className="flex flex-col items-center gap-1.5">
+        <div className='flex flex-col items-center gap-1.5'>
             {/* Goal inputs */}
-            <div className="flex items-center gap-2">
-                <GoalInput value={score.home} onChange={(v) => handleGoalChange('home', v)} />
-                <span className="text-gray-300 font-bold text-lg">—</span>
-                <GoalInput value={score.away} onChange={(v) => handleGoalChange('away', v)} />
+            <div className='flex items-center gap-2'>
+                <GoalInput
+                    value={score.home}
+                    onChange={(v) => handleGoalChange("home", v)}
+                />
+                <span className='text-gray-300 font-bold text-lg'>—</span>
+                <GoalInput
+                    value={score.away}
+                    onChange={(v) => handleGoalChange("away", v)}
+                />
             </div>
 
             {/* 1/X/2 selector */}
-            <div className="inline-flex rounded-lg overflow-hidden border-2 border-gray-200">
+            <div className='inline-flex rounded-lg overflow-hidden border-2 border-gray-200'>
                 {RESULT_OPTIONS.map((opt) => (
                     <button
                         key={opt.value}
                         title={opt.title}
                         onClick={() =>
-                            dispatch({ type: 'SET_RESULT', payload: { matchId: match.id, result: opt.value } })
+                            dispatch({
+                                type: "SET_RESULT",
+                                payload: {
+                                    matchId: match.id,
+                                    result: opt.value,
+                                },
+                            })
                         }
                         className={`px-4 py-1.5 text-sm font-bold transition-colors ${
                             current === opt.value
-                                ? 'bg-blue-400 text-white'
-                                : 'bg-white text-gray-500 hover:bg-gray-100'
+                                ? "bg-blue-400 text-white"
+                                : "bg-white text-gray-500 hover:bg-gray-100"
                         }`}
                     >
                         {opt.label}
@@ -153,35 +187,57 @@ export function ResultSelector({ match }) {
 
             {/* Pronostico: highlight highest-probability outcome */}
             {pronostico && (
-                <PronosticoDisplay pronostico={pronostico} highlightResult={pronosticoHighlight} />
+                <PronosticoDisplay
+                    pronostico={pronostico}
+                    highlightResult={pronosticoHighlight}
+                />
             )}
         </div>
     );
 }
 
 export default function JornadaView() {
-    const { state, dispatch, JORNADAS, leagueSlug, seasonYear } = useSimulation();
+    const { state, dispatch, JORNADAS, leagueSlug, seasonYear } =
+        useSimulation();
     const params = useParams();
     const navigate = useNavigate();
 
     // Jornada from URL params takes priority; fall back to context currentJornada
     const urlJornada = params.jornada ? parseInt(params.jornada, 10) : null;
-    const jornada = (urlJornada && !isNaN(urlJornada)) ? urlJornada : (state.currentJornada ?? JORNADAS[0] ?? 1);
+    const jornada =
+        urlJornada && !isNaN(urlJornada)
+            ? urlJornada
+            : (state.currentJornada ?? JORNADAS[0] ?? 1);
 
     // On mount without URL jornada, redirect to canonical URL
     useEffect(() => {
-        if (!params.jornada && leagueSlug && seasonYear && state.currentJornada) {
+        if (
+            !params.jornada &&
+            leagueSlug &&
+            seasonYear &&
+            state.currentJornada
+        ) {
             navigate(
                 `/jornadas/${leagueSlug}/${seasonYear}/${state.currentJornada}`,
                 { replace: true },
             );
         }
-    }, [params.jornada, leagueSlug, seasonYear, state.currentJornada, navigate]);
+    }, [
+        params.jornada,
+        leagueSlug,
+        seasonYear,
+        state.currentJornada,
+        navigate,
+    ]);
 
     // Sync URL jornada back into context so other views that read currentJornada stay in sync
     useEffect(() => {
-        if (urlJornada && !isNaN(urlJornada) && urlJornada !== state.currentJornada) {
-            dispatch({ type: 'SET_JORNADA', payload: urlJornada });
+        if (
+            urlJornada &&
+            !isNaN(urlJornada) &&
+            urlJornada !== state.currentJornada
+        ) {
+            dispatch({ type: "SET_JORNADA", payload: urlJornada });
         }
     }, [urlJornada, state.currentJornada, dispatch]);
 
@@ -189,7 +245,7 @@ export default function JornadaView() {
         if (leagueSlug && seasonYear) {
             navigate(`/jornadas/${leagueSlug}/${seasonYear}/${j}`);
         } else {
-            dispatch({ type: 'SET_JORNADA', payload: j });
+            dispatch({ type: "SET_JORNADA", payload: j });
         }
     };
 
@@ -200,27 +256,64 @@ export default function JornadaView() {
     return (
         <div className='px-2 py-4'>
             {/* Jornada navigator with dropdown */}
-            <div className='flex items-center justify-center mb-5 gap-3'>
-                <label htmlFor="jornada-select" className="text-sm font-semibold text-gray-700 shrink-0">
-                    Jornada:
-                </label>
-                <div className="relative inline-block">
-                    <select
-                        id="jornada-select"
-                        className="appearance-none bg-white border-2 border-blue-200 text-gray-700 font-semibold rounded-xl pl-4 pr-10 py-2 text-sm shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-500 cursor-pointer transition-all"
-                        value={jornada}
-                        onChange={(e) => handleJornadaChange(parseInt(e.target.value, 10))}
+            <div className='flex justify-between items-center gap-2 mb-4 w-full'>
+                <button
+                    onClick={() => handleJornadaChange(jornada - 1)}
+                    disabled={jornada <= JORNADAS[0]}
+                    className='p-1 rounded disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300'
+                >
+                    {/* boton para cambiar a la jornada anterior */}
+                    <LeftArrowIcon className='w-5 h-5' />
+                </button>
+                <div className='flex items-center gap-2'>
+                    <label
+                        htmlFor='jornada-select'
+                        className='text-sm font-semibold text-gray-700 shrink-0'
                     >
-                        {JORNADAS.map((j) => (
-                            <option key={j} value={j}>Jornada {j}</option>
-                        ))}
-                    </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        Jornada:
+                    </label>
+                    <div className='relative inline-block'>
+                        <select
+                            id='jornada-select'
+                            className='appearance-none bg-white border-2 border-blue-200 text-gray-700 font-semibold rounded-xl pl-4 pr-10 py-2 text-sm shadow-sm hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-500 cursor-pointer transition-all'
+                            value={jornada}
+                            onChange={(e) =>
+                                handleJornadaChange(
+                                    parseInt(e.target.value, 10),
+                                )
+                            }
+                        >
+                            {JORNADAS.map((j) => (
+                                <option key={j} value={j}>
+                                    Jornada {j}
+                                </option>
+                            ))}
+                        </select>
+                        <div className='pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-blue-500'>
+                            <svg
+                                className='w-4 h-4'
+                                fill='none'
+                                stroke='currentColor'
+                                viewBox='0 0 24 24'
+                            >
+                                <path
+                                    strokeLinecap='round'
+                                    strokeLinejoin='round'
+                                    strokeWidth={2.5}
+                                    d='M19 9l-7 7-7-7'
+                                />
+                            </svg>
+                        </div>
                     </div>
                 </div>
+                <button
+                    onClick={() => handleJornadaChange(jornada + 1)}
+                    disabled={jornada >= JORNADAS[JORNADAS.length - 1]}
+                    className='p-1 rounded disabled:opacity-50 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-blue-300'
+                >
+                    {/* boton para cambiar a la jornada siguiente */}
+                    <RightArrowIcon className='w-5 h-5' />
+                </button>
             </div>
 
             {/* Match list */}

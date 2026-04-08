@@ -11,7 +11,7 @@ import { computeCurrentJornada } from '../utils/navigation';
 const SimulationContext = createContext(null);
 
 // Default season id – can be overridden via VITE_SEASON_ID env var
-const DEFAULT_SEASON_ID = import.meta.env.VITE_SEASON_ID || null;
+const DEFAULT_SEASON_ID = import.meta.env.VITE_SEASON_ID || 1;
 
 const initialState = {
   loading: true,
