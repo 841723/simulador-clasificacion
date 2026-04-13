@@ -210,7 +210,7 @@ def upsert_team(conn, season_id, team_data):
             VALUES (%s, %s, %s, %s)
             ON CONFLICT (slug) DO UPDATE
               SET name        = EXCLUDED.name,
-                  image_url   = EXCLUDED.image_url,
+                  image_url = COALESCE(EXCLUDED.image_url, teams.image_url),
                   external_id = EXCLUDED.external_id
             RETURNING id
             """,
@@ -446,7 +446,7 @@ def main():
                     print("Fetching teams from standings API...")
                     standings_data = fetch_standings(args.league_sf, args.season_sf, browser)
                     seed_teams_from_standings(conn, season_id, standings_data, args.league_sf)
-                return
+
                 from_jornada = args.from_jornada
                 if from_jornada is None:
                     from_jornada = compute_first_incomplete_jornada(conn, season_id)
