@@ -61,7 +61,7 @@ function ZoneProbDisplay({ probs, zones }) {
     const pct = probs[key] || 0;
     let label = null;
     if (pct === 0) {
-      label = null;
+      label = ' ';
     } else if (pct < 1) {
       label = '<1%';
     } else {
@@ -75,7 +75,7 @@ function ZoneProbDisplay({ probs, zones }) {
   return (
     <div className="flex gap-1.5 flex-wrap justify-center">
       {formatted.map(({ key, textColor, label }) => (
-        <span key={key} className={`text-xs font-semibold ${textColor}`}>
+        <span key={key} className={`w-10 text-right text-xs font-semibold ${textColor}`}>
           {label}
         </span>
       ))}
