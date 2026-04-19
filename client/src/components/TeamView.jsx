@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSimulation } from "../context/SimulationContext";
 import { isMatchLocked, isModified } from "../utils/standings";
@@ -108,7 +108,8 @@ export default function TeamView() {
         }
     }, [params.leagueSlug, leagueSlug, seasonYear, navigate]);
 
-    const nowTs = Math.floor(Date.now() / 1000);
+    // Stable timestamp captured on mount for filtering future jornadas
+    const [nowTs] = useState(() => Math.floor(Date.now() / 1000));
 
     // Only show future jornadas (where at least one match hasn't started yet)
     const futureJornadas = JORNADAS.filter((j) =>

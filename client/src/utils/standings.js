@@ -102,7 +102,7 @@ export function isModified(matchId, state) {
  * Base standings represent the start of season (all zeros).
  * Both locked (actual) and unlocked (simulated) match results are applied.
  */
-export function calculateProjectedStandings(baseStandingsRows, allMatches, results, lockedMatchIds = {}, scores = {}) {
+export function calculateProjectedStandings(baseStandingsRows, allMatches, results, _lockedMatchIds = {}, scores = {}) {
   // Deep clone base standings into a mutable map
   const map = {};
   for (const row of baseStandingsRows) {

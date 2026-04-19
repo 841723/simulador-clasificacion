@@ -21,6 +21,7 @@ const initialState = {
   leagueExternalId: null,
   seasonExternalId: null,
   baseStandings: [],
+  backendStandings: [],
   allMatches: [],
   results: {},
   originalResults: {},
@@ -41,14 +42,18 @@ function reducer(state, action) {
     case 'LOADING':
       return { ...state, loading: true, error: null };
     case 'LOAD_DATA': {
-      const { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear } = action.payload;
-      const results = buildInitialResults(allMatches, baseStandings, lockedMatchIds);
+      const { baseStandings, backendStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear } = action.payload;
+      // Use backendStandings (with played matches applied) for default result calculation
+      // so that home/away advantage defaults reflect the real current table.
+      const standingsForDefaults = backendStandings.length > 0 ? backendStandings : baseStandings;
+      const results = buildInitialResults(allMatches, standingsForDefaults, lockedMatchIds);
       const scores = buildInitialScores(allMatches, results, lockedMatchIds);
       const jornadas = [...new Set(allMatches.map((m) => m.jornada))].sort((a, b) => a - b);
       return {
         ...state,
         loading: false,
         baseStandings,
+        backendStandings,
         allMatches,
         results,
         originalResults: { ...results },
@@ -231,8 +236,16 @@ export function SimulationProvider({ children }) {
   }, [selectedSeasonId]);
 
   // ── Fetch season data when selectedSeasonId changes ───────────────────
+  // NOTE: allSeasons must be included in the dependency array because fetchAll
+  // needs it to resolve leagueSlug/seasonYear. Without it, the effect would fire
+  // while allSeasons is still [] (on the very first render when selectedSeasonId
+  // is initialised from DEFAULT_SEASON_ID), leaving leagueSlug/seasonYear null
+  // in state permanently and breaking all URL-based navigation.
   useEffect(() => {
     if (!selectedSeasonId) return;
+    // Wait until the season list has been fetched before trying to look up
+    // the current season's league slug and year.
+    if (allSeasons.length === 0) return;
     dispatch({ type: 'LOADING' });
     async function fetchAll() {
       try {
@@ -299,30 +312,65 @@ export function SimulationProvider({ children }) {
           probIsFinal: m.probIsFinal ?? false,
         }));
 
+        // Compute currentJornada the same way the reducer does, so we can fetch
+        // the backend standings up to that jornada.
+        const jornadas = [...new Set(allMatches.map((m) => m.jornada))].sort((a, b) => a - b);
+        const lastJornada = jornadas[jornadas.length - 1] ?? 42;
+        const currentJornada = computeCurrentJornada(allMatches, lastJornada);
+
+        // Fetch computed standings from backend (base standings + all locked results up to currentJornada).
+        // Falls back to empty array on error so the app still works with base standings only.
+        let backendStandings = [];
+        if (leagueSlug && seasonYear && currentJornada != null) {
+          try {
+            const bsRes = await fetch(`/api/standings/${leagueSlug}/${seasonYear}/${currentJornada}`);
+            if (bsRes.ok) {
+              backendStandings = await bsRes.json();
+            }
+          } catch {
+            // Non-fatal: proceed without computed standings
+          }
+        }
+
         dispatch({
           type: 'LOAD_DATA',
-          payload: { baseStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear },
+          payload: { baseStandings, backendStandings, allMatches, lockedMatchIds, pronosticos, leagueExternalId, seasonExternalId, leagueSlug, seasonYear },
         });
       } catch (err) {
         dispatch({ type: 'LOAD_ERROR', payload: err.message });
       }
     }
     fetchAll();
-  // We intentionally don't include allSeasons in deps – it's stable after first load
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeasonId]);
+  // allSeasons is required: without it, the effect could run while allSeasons is
+  // still [] and currentSeasonInfo would be undefined (see comment above).
+  }, [selectedSeasonId, allSeasons]);
 
   // ── Compute projected standings ────────────────────────────────────────
   const projectedStandings = useMemo(() => {
-    if (state.baseStandings.length === 0) return [];
-    return calculateProjectedStandings(
-      state.baseStandings,
-      state.allMatches,
-      state.results,
-      state.lockedMatchIds,
-      state.scores
+    if (state.backendStandings.length === 0) {
+      // Fallback: if backend standings not yet loaded, compute from base standings as before
+      if (state.baseStandings.length === 0) return [];
+      return calculateProjectedStandings(
+        state.baseStandings,
+        state.allMatches,
+        state.results,
+        state.lockedMatchIds,
+        state.scores,
+      );
+    }
+    // Backend standings already include all locked (played) match results.
+    // Only apply future unlocked matches on top.
+    const futureMatches = state.allMatches.filter(
+      (m) => state.lockedMatchIds[m.id] === undefined,
     );
-  }, [state.baseStandings, state.allMatches, state.results, state.lockedMatchIds, state.scores]);
+    return calculateProjectedStandings(
+      state.backendStandings,
+      futureMatches,
+      state.results,
+      {}, // no locked IDs needed – already baked into backendStandings
+      state.scores,
+    );
+  }, [state.backendStandings, state.baseStandings, state.allMatches, state.lockedMatchIds, state.results, state.scores]);
 
   // ── Derive JORNADAS list dynamically ──────────────────────────────────
   const JORNADAS = useMemo(

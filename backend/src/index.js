@@ -9,6 +9,7 @@ import teamsRouter from './routes/teams.js';
 import leaguesRouter from './routes/leagues.js';
 import matchesRouter from './routes/matches.js';
 import standingsRouter from './routes/standings.js';
+import computedStandingsRouter from './routes/computed_standings.js';
 import simulationsRouter from './routes/simulations.js';
 import probabilitySourcesRouter from './routes/probability_sources.js';
 
@@ -45,6 +46,7 @@ app.use('/api/teams', teamsRouter);
 app.use('/api/leagues', leaguesRouter);
 app.use('/api/seasons/:seasonId/matches', matchesRouter);
 app.use('/api/seasons/:seasonId/standings', standingsRouter);
+app.use('/api/standings', computedStandingsRouter);
 app.use('/api/simulations', simulationsRouter);
 app.use('/api/probability-sources', probabilitySourcesRouter);
 

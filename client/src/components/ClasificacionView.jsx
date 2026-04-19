@@ -6,7 +6,7 @@ import {
   getLast5Matches,
   calculateH2H,
 } from '../utils/monteCarlo';
-import { calculateProjectedStandings } from '../utils/standings';
+import { calculateProjectedStandings, parseResultado } from '../utils/standings';
 import { computeCurrentJornada } from '../utils/navigation';
 import TeamLogo from './TeamLogo';
 
@@ -61,7 +61,7 @@ function ZoneProbDisplay({ probs, zones }) {
     const pct = probs[key] || 0;
     let label = null;
     if (pct === 0) {
-      label = null;
+      label = ' ';
     } else if (pct < 1) {
       label = '<1%';
     } else {
@@ -75,7 +75,7 @@ function ZoneProbDisplay({ probs, zones }) {
   return (
     <div className="flex gap-1.5 flex-wrap justify-center">
       {formatted.map(({ key, textColor, label }) => (
-        <span key={key} className={`text-xs font-semibold ${textColor}`}>
+        <span key={key} className={`w-10 text-right text-xs font-semibold ${textColor}`}>
           {label}
         </span>
       ))}
@@ -488,17 +488,27 @@ export default function ClasificacionView() {
     return { lockedUpToX, lockedScoresUpToX };
   }, [state.lockedMatchIds, state.allMatches, selectedJornada]);
 
+  // Convert score strings (e.g. "1-3") to result codes ("1"|"X"|"2") for locked matches up to X
+  const lockedResultCodesUpToX = useMemo(() => {
+    const map = {};
+    for (const [id, scoreStr] of Object.entries(lockedUpToX)) {
+      const code = parseResultado(scoreStr);
+      if (code) map[id] = code;
+    }
+    return map;
+  }, [lockedUpToX]);
+
   // Standings at jornada X: only locked results up to X (actual results)
   const standingsAtX = useMemo(() => {
     if (state.baseStandings.length === 0) return [];
     return calculateProjectedStandings(
       state.baseStandings,
       matchesUpToX,
-      lockedUpToX,
-      lockedUpToX,
+      lockedResultCodesUpToX,  // result codes ('1'|'X'|'2'), not score strings
+      lockedUpToX,             // lockedMatchIds (score strings, used for isLocked check)
       lockedScoresUpToX,
     );
-  }, [state.baseStandings, matchesUpToX, lockedUpToX, lockedScoresUpToX]);
+  }, [state.baseStandings, matchesUpToX, lockedResultCodesUpToX, lockedUpToX, lockedScoresUpToX]);
 
   // Pronosticos for future matches (jornada > X) – only real odds (probIsFinal)
   const effectivePronosticos = useMemo(() => {
@@ -520,10 +530,10 @@ export default function ClasificacionView() {
     );
   }, [matchesFromX1, standingsAtX, effectivePronosticos, state.scores, state.results, currentZones]);
 
-  // Last 5 results per team (locked results up to X only)
+  // Last 5 results per team (locked results up to X only, using result codes)
   const last5ByTeam = useMemo(
-    () => getLast5Matches(matchesUpToX, lockedUpToX, lockedUpToX),
-    [matchesUpToX, lockedUpToX],
+    () => getLast5Matches(matchesUpToX, lockedResultCodesUpToX, lockedUpToX),
+    [matchesUpToX, lockedResultCodesUpToX, lockedUpToX],
   );
 
   // H2H data when a team is selected (based on standings at X)
@@ -532,12 +542,12 @@ export default function ClasificacionView() {
     return calculateH2H(
       selectedTeam,
       matchesUpToX,
-      lockedUpToX,
+      lockedResultCodesUpToX,  // result codes ('1'|'X'|'2'), not score strings
       lockedScoresUpToX,
       lockedUpToX,
       standingsAtX,
     );
-  }, [selectedTeam, matchesUpToX, lockedUpToX, lockedScoresUpToX, standingsAtX]);
+  }, [selectedTeam, matchesUpToX, lockedResultCodesUpToX, lockedUpToX, lockedScoresUpToX, standingsAtX]);
 
   if (standingsAtX.length === 0) {
     return (
@@ -546,8 +556,6 @@ export default function ClasificacionView() {
       </div>
     );
   }
-
-  const lastJornada = JORNADAS[JORNADAS.length - 1] ?? 42;
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
