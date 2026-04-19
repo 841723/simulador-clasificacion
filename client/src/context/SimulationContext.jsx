@@ -236,8 +236,16 @@ export function SimulationProvider({ children }) {
   }, [selectedSeasonId]);
 
   // ── Fetch season data when selectedSeasonId changes ───────────────────
+  // NOTE: allSeasons must be included in the dependency array because fetchAll
+  // needs it to resolve leagueSlug/seasonYear. Without it, the effect would fire
+  // while allSeasons is still [] (on the very first render when selectedSeasonId
+  // is initialised from DEFAULT_SEASON_ID), leaving leagueSlug/seasonYear null
+  // in state permanently and breaking all URL-based navigation.
   useEffect(() => {
     if (!selectedSeasonId) return;
+    // Wait until the season list has been fetched before trying to look up
+    // the current season's league slug and year.
+    if (allSeasons.length === 0) return;
     dispatch({ type: 'LOADING' });
     async function fetchAll() {
       try {
@@ -333,9 +341,9 @@ export function SimulationProvider({ children }) {
       }
     }
     fetchAll();
-  // We intentionally don't include allSeasons in deps – it's stable after first load
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSeasonId]);
+  // allSeasons is required: without it, the effect could run while allSeasons is
+  // still [] and currentSeasonInfo would be undefined (see comment above).
+  }, [selectedSeasonId, allSeasons]);
 
   // ── Compute projected standings ────────────────────────────────────────
   const projectedStandings = useMemo(() => {
